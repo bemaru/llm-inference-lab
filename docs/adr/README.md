@@ -17,4 +17,4 @@ Use [adr-template.md](adr-template.md) when creating an ADR.
 ## Records
 
 - [ADR-0001: Use an MLPerf Endpoints-derived methodology for LLM serving benchmarks](0001-use-mlperf-endpoints-derived-benchmark-methodology.md) — proposed
-- [ADR-0002: Use MLflow for optional local experiment tracking](0002-use-mlflow-for-benchmark-experiment-tracking.md) — proposed
+- [ADR-0002: Use MLflow for optional experiment tracking](0002-use-mlflow-for-benchmark-experiment-tracking.md) — proposed

@@ -34,7 +34,8 @@ docker compose -f engines/vllm/docker-compose.single-node.yml \
   --profile qwen36-nvfp4 up -d vllm-qwen36-35b-a3b-nvfp4
 ```
 
-MTP is intentionally absent. Add it only in a separate A/B profile after chat, streaming, and Tool Calling correctness pass.
+MTP is intentionally absent from the baseline profile. Use the separate MTP-on
+A/B profile below after checking chat, streaming, and tool calling on your runtime.
 
 After that gate passes, stop the baseline and start the NVIDIA-recommended MTP
 `n3` profile on the same port. All other serving controls remain unchanged.
@@ -54,6 +55,10 @@ docker compose -f engines/vllm/docker-compose.single-node.yml \
 The MTP profile follows the model card's speculative configuration: three MTP
 tokens with the speculative MoE backend set to Triton. Compare it with the
 MTP-off run using the same client workload; do not mix their results.
+
+Both configurations have retained Quick measurements; see the
+[Qwen recorded comparisons](../../models/qwen/README.md#recorded-comparisons).
+Recheck the baseline when the artifact, runtime, or serving settings change.
 
 ## Candidate Profiles
 

@@ -1,0 +1,112 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="680" viewBox="0 0 1280 680" role="img" aria-labelledby="overview-title overview-desc">
+  <title id="overview-title">LLM Inference Lab — Serving, Benchmarking, Results</title>
+  <desc id="overview-desc">Six repository components: runtime profiles configure a user-run endpoint, benchmark clients exchange calls and responses with it and write local reports, and reviewed Quick runs become normalized results and a static leaderboard. Sustained-load results follow a separate track. This is not a live deployment status.</desc>
+  <metadata>Derived from the reviewed README Mermaid source. SHA-256: 68b2cbfbb1253b424a0f944278c6683136d267bc9f5ebdceef83009af735289c. Hash equality does not replace semantic review.</metadata>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M1 1L9 5L1 9Z" fill="#657a96"/>
+    </marker>
+    <marker id="review-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M1 1L9 5L1 9Z" fill="#21745c"/>
+    </marker>
+    <style>
+      text { font-family: 'Segoe UI', 'Malgun Gothic', 'Noto Sans KR', Arial, sans-serif; fill: #182b45; }
+      .title { font-size: 42px; font-weight: 700; letter-spacing: -1px; }
+      .subtitle { font-size: 22px; fill: #52647b; }
+      .section { font-size: 32px; font-weight: 700; letter-spacing: -.6px; }
+      .number { font-size: 23px; font-weight: 700; }
+      .section-note { font-size: 18px; fill: #52647b; }
+      .node-title { font-size: 25px; font-weight: 650; letter-spacing: -.4px; }
+      .body { font-size: 22px; fill: #354a65; }
+      .detail { font-size: 20px; fill: #52647b; }
+      .edge-label { font-size: 18px; fill: #52647b; }
+      .footer { font-size: 20px; fill: #354a65; }
+      .small { font-size: 18px; fill: #52647b; }
+      .blue { fill: #3069ac; }
+      .amber { fill: #94601c; }
+      .green { fill: #21745c; }
+      .flow { fill: none; stroke: #657a96; stroke-width: 2.3; marker-end: url(#arrow); }
+      .review-flow { fill: none; stroke: #21745c; stroke-width: 2.3; marker-end: url(#review-arrow); }
+    </style>
+  </defs>
+  <rect width="1280" height="680" rx="24" fill="#f7f9fc"/>
+  <text class="title" x="48" y="69" data-max-width="850">Serve. Measure. Compare.</text>
+  <text class="subtitle" x="48" y="108" data-max-width="850">Single-node LLM inference experiments</text>
+  <rect x="946" y="49" width="286" height="45" rx="22" fill="#e9eff7"/>
+  <text class="body" x="1089" y="80" text-anchor="middle" data-max-width="250">DGX Spark / GB10</text>
+
+  <text class="number blue" x="48" y="167" data-max-width="38">01</text>
+  <text class="section" x="93" y="167" data-max-width="295">Serving</text>
+  <text class="section-note" x="48" y="197" data-max-width="340">런타임과 실행 환경</text>
+  <text class="number amber" x="470" y="167" data-max-width="38">02</text>
+  <text class="section" x="515" y="167" data-max-width="295">Benchmarking</text>
+  <text class="section-note" x="470" y="197" data-max-width="340">기능 점검과 성능 측정</text>
+  <text class="number green" x="892" y="167" data-max-width="38">03</text>
+  <text class="section" x="937" y="167" data-max-width="295">Results</text>
+  <text class="section-note" x="892" y="197" data-max-width="340">조건을 확인한 결과 비교</text>
+
+  <rect x="32" y="212" width="372" height="370" rx="20" fill="#edf2f9"/>
+  <rect x="454" y="212" width="372" height="370" rx="20" fill="#f7f1e8"/>
+  <rect x="876" y="212" width="372" height="370" rx="20" fill="#eaf3ef"/>
+
+  <g data-node="profiles">
+    <rect x="48" y="224" width="340" height="164" rx="14" fill="#ffffff" stroke="#d3ddeb"/>
+    <rect x="48" y="240" width="4" height="39" rx="2" fill="#3069ac"/>
+    <text class="node-title" x="72" y="260" data-max-width="292">Runtime profiles</text>
+    <text class="body" x="72" y="302" data-max-width="292">vLLM · SGLang · Ollama</text>
+    <text class="detail" x="72" y="334" data-max-width="292">Quantization · scheduler</text>
+    <text class="detail" x="72" y="363" data-max-width="292">Compiled · speculative</text>
+  </g>
+  <g data-node="endpoint">
+    <rect x="48" y="465" width="340" height="102" rx="14" fill="#f9fbff" stroke="#7b95b7" stroke-dasharray="6 5"/>
+    <text class="node-title" x="72" y="501" data-max-width="292">Your endpoint</text>
+    <text class="detail" x="72" y="535" data-max-width="292">User-run inference API</text>
+  </g>
+  <g data-node="clients">
+    <rect x="470" y="224" width="340" height="164" rx="14" fill="#ffffff" stroke="#e4d8c4"/>
+    <rect x="470" y="240" width="4" height="39" rx="2" fill="#b47a29"/>
+    <text class="node-title" x="494" y="260" data-max-width="292">Benchmark clients</text>
+    <text class="detail" x="494" y="302" data-max-width="292">Quick checks + sustained load</text>
+    <text class="body" x="494" y="334" data-max-width="292">TTFT · TPOT · tokens/s</text>
+    <text class="detail" x="494" y="363" data-max-width="292">Streaming · tool schemas</text>
+  </g>
+  <g data-node="raw">
+    <rect x="470" y="465" width="340" height="102" rx="14" fill="#fffaf2" stroke="#d9c3a3"/>
+    <text class="node-title" x="494" y="501" data-max-width="292">Raw run reports</text>
+    <text class="detail" x="494" y="535" data-max-width="292">Local only · outside Git</text>
+  </g>
+  <g data-node="results">
+    <rect x="892" y="224" width="340" height="164" rx="14" fill="#ffffff" stroke="#c8ded4"/>
+    <rect x="892" y="240" width="4" height="39" rx="2" fill="#21745c"/>
+    <text class="node-title" x="916" y="260" data-max-width="292">Reviewed results</text>
+    <text class="body" x="916" y="302" data-max-width="292">Versioned JSON</text>
+    <text class="detail" x="916" y="334" data-max-width="292">Source hashes · run groups</text>
+    <text class="detail" x="916" y="363" data-max-width="292">Quick + historical smoke</text>
+  </g>
+  <g data-node="leaderboard">
+    <rect x="892" y="465" width="340" height="102" rx="14" fill="#ffffff" stroke="#c8ded4"/>
+    <text class="node-title" x="916" y="501" data-max-width="292">Static leaderboard</text>
+    <text class="detail" x="916" y="535" data-max-width="292">Grouped comparisons</text>
+  </g>
+
+  <path class="flow" data-edge="profiles endpoint" d="M218 388V461"/>
+  <text class="edge-label" x="234" y="433" data-max-width="145">configure</text>
+  <path class="flow" data-edge="clients raw" d="M640 388V461"/>
+  <text class="edge-label" x="656" y="433" data-max-width="145">write</text>
+  <path class="review-flow" data-edge="results leaderboard" d="M1062 388V461"/>
+  <text class="edge-label green" x="1078" y="433" data-max-width="145">build</text>
+
+  <path class="flow" data-edge="endpoint clients" d="M392 516H412Q430 516 430 498V302Q430 284 448 284H466" marker-start="url(#arrow)"/>
+  <rect x="398" y="400" width="64" height="58" rx="9" fill="#f7f9fc"/>
+  <text class="edge-label" x="430" y="422" text-anchor="middle" data-max-width="60">call /</text>
+  <text class="edge-label" x="430" y="446" text-anchor="middle" data-max-width="60">return</text>
+
+  <path class="review-flow" data-edge="raw results" d="M810 516H834Q852 516 852 498V302Q852 284 870 284H888"/>
+  <rect x="820" y="400" width="64" height="58" rx="9" fill="#f7f9fc"/>
+  <text class="edge-label green" x="852" y="422" text-anchor="middle" data-max-width="60">review</text>
+  <text class="edge-label green" x="852" y="446" text-anchor="middle" data-max-width="60">Quick</text>
+
+  <path d="M48 601H1232" stroke="#dae2ed"/>
+  <text class="footer" x="48" y="630" data-max-width="1184">Raw runs stay local. Public summaries retain conditions and source hashes.</text>
+  <text class="small" x="48" y="659" data-max-width="1184">Repository overview, not a live deployment. Sustained-load results follow a separate track.</text>
+</svg>

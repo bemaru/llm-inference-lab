@@ -1,10 +1,16 @@
-# Gemma4 26B on vLLM
+# Gemma4 26B BF16 on vLLM
 
-## Current Baseline
+## Historical baseline — 2026-05-01
+
+This page preserves the BF16 API smoke recorded as
+`20260501-gemma4-bf16-smoke` in the
+[normalized result set](../../benchmarks/results/dgx-spark.json). It is not the
+current serving default or a Quick benchmark. See the
+[Gemma guide](README.md) for later quantized profiles and measurements.
 
 Model: `google/gemma-4-26B-A4B-it`
 
-Known working Docker image on CUDA 13 / DGX Spark-class hardware:
+Docker image used in that CUDA 13 / DGX Spark-class measurement:
 
 ```text
 vllm/vllm-openai:gemma4-cu130
@@ -42,9 +48,13 @@ vllm serve google/gemma-4-26B-A4B-it \
 
 Gemma4 26B BF16 can run through vLLM on DGX Spark-class hardware, but it is not a comfortable default for a shared host when other memory-heavy services are running. Treat BF16 as a functionality baseline, not an optimized operating mode.
 
-Next validation should focus on:
+## Follow-up records
 
-- FP4/NVFP4 or other quantized Gemma4 variants
-- whether a newer vLLM image removes the need for `--enforce-eager`
-- concurrency and context-length sensitivity
-- SGLang or TensorRT-LLM comparison if Gemma4 support is mature enough
+NVFP4 and eager/compiled execution were subsequently measured on 2026-08-25.
+See the [scheduler comparison](../../benchmarks/results/gemma4-scheduler.md)
+for the exact model revision, runtime, workload, and retained results. Those
+Quick runs are a separate evidence set, not an update to the BF16 numbers above.
+
+Sustained-load behavior, context-length sensitivity, and answer quality require
+separate evidence. This BF16 record does not establish SGLang or TensorRT-LLM
+compatibility.

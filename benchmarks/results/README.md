@@ -57,3 +57,45 @@ python3 leaderboards/build.py --check
 The schema intentionally does not depend on MLflow or another experiment
 backend. A future publisher can send the same records to an external registry
 without changing the retained repository evidence.
+
+## Experiment Notes
+
+- [Gemma 4: scheduler settings and execution mode](gemma4-scheduler.md) —
+  English and Korean explanations of the retained three-configuration Quick
+  comparison, including workload, cache, and small-sample limitations.
+
+## Evidence Flow
+
+![Benchmark clients call an endpoint and save local raw JSON; reviewed Quick summaries feed the static leaderboard.](../../docs/assets/benchmark-workflow.svg)
+
+This narrower flow documents result handling. Raw reports stay outside Git.
+The current importer accepts selected, reviewed Quick runs; historical smoke
+records remain labeled and unranked, while characterization uses a separate
+results track. See the [project overview](../../README.md#architecture-at-a-glance)
+for serving configuration and benchmark scope.
+
+<details>
+<summary>Evidence-flow source — Mermaid</summary>
+
+This is the canonical source for the unchanged evidence-flow SVG above.
+
+```mermaid
+---
+config:
+  htmlLabels: false
+  fontFamily: Arial
+  flowchart:
+    padding: 12
+    rankSpacing: 36
+  themeCSS: ".edgeLabel rect { fill: #ffffff !important; opacity: 1 !important; }"
+---
+flowchart LR
+    accTitle: Inference benchmark evidence flow
+    accDescr: Benchmark clients call a user-provided endpoint and save local result JSON. Selected Quick runs are reviewed and normalized into public summaries, then rendered as a static leaderboard.
+    E["Your endpoint"] <-->|call / return| B["Benchmark clients"]
+    B -->|write| R["Raw JSON<br/>local only"]
+    R -->|review Quick runs| S["Reviewed summaries<br/>public"]
+    S -->|build| L["Leaderboard"]
+```
+
+</details>
