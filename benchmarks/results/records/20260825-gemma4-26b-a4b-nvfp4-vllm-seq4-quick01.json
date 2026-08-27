@@ -1,0 +1,29 @@
+{
+  "id": "20260825-gemma4-26b-a4b-nvfp4-vllm-seq4-quick01",
+  "comparison_group": "dgx-spark-gemma4-sequential-quick-2026-08",
+  "status": "pass",
+  "promotion": "advance",
+  "eligible_for_ranking": true,
+  "model": {
+    "display_name": "Gemma4 26B-A4B NVFP4 · vLLM seq4",
+    "family": "Gemma4",
+    "architecture": "moe",
+    "total_parameters_b": 25.2,
+    "active_parameters_b": 3.8
+  },
+  "artifact": {
+    "publisher": "NVIDIA",
+    "license": "실행 기록에 미기재",
+    "commercial_use": "not_recorded"
+  },
+  "answer_quality": "not_run",
+  "notes": [
+    "max_num_seqs만 2에서 4로 변경한 A/B 후보이며 한국어 chat과 단순·중첩·32-tool 선택을 각각 3회 통과했습니다.",
+    "동일 Quick workload의 C2 aggregate output TPS가 34.033에서 40.948로 증가했고 accelerator process memory는 30 MiB 증가했습니다.",
+    "C4·C8 결과는 1회 characterization preview이므로 표준 용량 측정이나 품질 평가를 대신하지 않습니다."
+  ],
+  "provenance": {
+    "measurement_scope": "DGX Spark local bridge endpoint의 vLLM NVFP4 MTP-off max_num_seqs=4 canonical Quick run",
+    "source_record_sha256": "f8895edd68379f6f448814bf3c80f3e31c5ddaa7a98776f3f3aec650adc13675"
+  }
+}

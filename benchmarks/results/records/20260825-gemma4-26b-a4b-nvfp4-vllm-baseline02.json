@@ -1,0 +1,29 @@
+{
+  "id": "20260825-gemma4-26b-a4b-nvfp4-vllm-baseline02",
+  "comparison_group": "dgx-spark-gemma4-sequential-quick-2026-08",
+  "status": "pass",
+  "promotion": "advance",
+  "eligible_for_ranking": true,
+  "model": {
+    "display_name": "Gemma4 26B-A4B NVFP4 · vLLM",
+    "family": "Gemma4",
+    "architecture": "moe",
+    "total_parameters_b": 25.2,
+    "active_parameters_b": 3.8
+  },
+  "artifact": {
+    "publisher": "NVIDIA",
+    "license": "실행 기록에 미기재",
+    "commercial_use": "not_recorded"
+  },
+  "answer_quality": "not_run",
+  "notes": [
+    "한국어 chat과 단순·중첩·32-tool 선택을 각각 3회 통과했습니다.",
+    "DGX Spark GB10에서는 native FP4 compute가 아니라 Marlin weight-only FP4 경로를 사용합니다.",
+    "MTP-off 비교 기준선이며 FP8 KV-cache scaling 경고를 고려해 답변 품질은 별도로 평가해야 합니다."
+  ],
+  "provenance": {
+    "measurement_scope": "DGX Spark local bridge endpoint의 vLLM NVFP4 MTP-off canonical Quick run",
+    "source_record_sha256": "a53281b9fd0d521f539e2fd4d15de7b056ba5e06f495455e6c83d8f09637ebbc"
+  }
+}

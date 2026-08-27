@@ -1,0 +1,62 @@
+{
+  "hardware": {
+    "system": "NVIDIA DGX Spark",
+    "accelerator": "NVIDIA GB10",
+    "accelerator_count": 1,
+    "memory_gib": 128
+  },
+  "model_artifact": {
+    "id": "RadixArk/Qwen3.8-27B-NVFP4",
+    "revision": "554ebba9b5f1b79dc11246341960360e6ef05ef4",
+    "quantization": "ModelOpt NVFP4 mixed precision",
+    "tokenizer_revision": "554ebba9b5f1b79dc11246341960360e6ef05ef4"
+  },
+  "serving": {
+    "engine": "SGLang",
+    "version": "SGLang c14312a66420b75ca9a11bf1817c4db1fa26b097 with DFlash2 c90d8c34cf795185ee8de736b7ded9bca3fe0de1",
+    "image": "lmsysorg/sglang:qwen38-27b-dflash2",
+    "image_digest": null,
+    "command_profile": "engines/sglang/scripts/serve-qwen38-27b-nvfp4 dflash2",
+    "options": {
+      "image_id": "sha256:9601ae3d9f50cbaf404dde3566226d925ab0b1ffc5cbade428768d2ebe7be524",
+      "context_length": 32768,
+      "mem_fraction_static": 0.7,
+      "attention_backend": "flashinfer",
+      "chunked_prefill_size": 8192,
+      "kv_cache_dtype": "fp8_e4m3",
+      "mamba_ssm_dtype": "bfloat16",
+      "mamba_full_memory_ratio": 4.21,
+      "mamba_radix_cache_strategy": "extra_buffer",
+      "max_mamba_cache_size": 10,
+      "max_running_requests": 2
+    },
+    "speculative": {
+      "mode": "external-draft",
+      "draft_model": "z-lab/Qwen3.8-27B-DFlash2",
+      "draft_revision": "50307d4c4cde6860d4eee73e2547cd786fe8e8a4",
+      "settings": {
+        "algorithm": "DFLASH",
+        "num_draft_tokens": 8
+      }
+    }
+  },
+  "software": {
+    "os": "Ubuntu 24.04.4 LTS",
+    "kernel": "Linux 6.17.0-1014-nvidia aarch64 GNU/Linux",
+    "driver": "NVIDIA 580.142",
+    "container_runtime": "Docker 29.2.1"
+  },
+  "execution": {
+    "benchmark_host": "NVIDIA DGX Spark",
+    "network_path": "DGX Spark localhost",
+    "cpu_affinity": "5-9,15-19"
+  },
+  "provenance": {
+    "repository_revision": "6e6438bc8f3a67e6ff6098fb96c56d8b319c11b9",
+    "worktree_dirty": true,
+    "notes": [
+      "The local DFlash2 image has no registry digest; image ID and source revisions are retained.",
+      "Review the live software versions and worktree state before each retained run."
+    ]
+  }
+}

@@ -1,0 +1,132 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+usage() {
+  cat <<'EOF'
+Usage: serve-qwen38-27b-nvfp4 <mtp|dspark|dflash2>
+
+Environment overrides:
+  DOCKER_HOST       Docker target (required, for example ssh://your-host)
+  HF_CACHE          Hugging Face cache on the target host
+  SGLANG_CACHE      SGLang cache on the target host
+  CPUSET_CPUS       CPU affinity (default: 5-9,15-19)
+  DFLASH_IMAGE      Prebuilt DFlash2 image
+EOF
+}
+
+if (( $# != 1 )); then
+  usage >&2
+  exit 2
+fi
+
+mode="$1"
+export DOCKER_HOST="${DOCKER_HOST:?set DOCKER_HOST to the intended Docker target}"
+
+hf_cache="${HF_CACHE:-/home/your-user/.cache/huggingface}"
+sglang_cache="${SGLANG_CACHE:-/home/your-user/.cache/sglang}"
+cpuset_cpus="${CPUSET_CPUS:-5-9,15-19}"
+base_image="lmsysorg/sglang@sha256:3c0abdf41ef22de9d7a859dc16ed71eae69452e36c91f071a25e60c85a6d1fc6"
+dflash_image="${DFLASH_IMAGE:-lmsysorg/sglang:qwen38-27b-dflash2}"
+target_revision="554ebba9b5f1b79dc11246341960360e6ef05ef4"
+container="llm-lab-sglang-qwen38-nvfp4-${mode}"
+served_model="qwen3.8-27b-nvfp4-sglang-${mode}"
+
+case "$mode" in
+  mtp)
+    image="$base_image"
+    mamba_strategy="extra_buffer_lazy"
+    mamba_cache_size=8
+    speculative_args=(
+      --speculative-algorithm EAGLE
+      --speculative-num-steps 3
+      --speculative-eagle-topk 1
+      --speculative-num-draft-tokens 4
+    )
+    ;;
+  dspark)
+    image="$base_image"
+    mamba_strategy="extra_buffer_lazy"
+    mamba_cache_size=8
+    speculative_args=(
+      --speculative-algorithm DSPARK
+      --speculative-draft-model-path RadixArk/Qwen3.8-27B-DSpark
+      --speculative-draft-model-revision 85ef153be924f17ce4bf62726954eeaa4a73e854
+      --speculative-dspark-block-size 7
+      --speculative-draft-model-quantization unquant
+      --speculative-num-draft-tokens 8
+      --enable-torch-compile
+      --torch-compile-max-bs 4
+      --cuda-graph-max-bs-decode 4
+      --num-continuous-decode-steps 2
+    )
+    ;;
+  dflash2)
+    image="$dflash_image"
+    mamba_strategy="extra_buffer"
+    mamba_cache_size=10
+    speculative_args=(
+      --speculative-algorithm DFLASH
+      --speculative-draft-model-path z-lab/Qwen3.8-27B-DFlash2
+      --speculative-draft-model-revision 50307d4c4cde6860d4eee73e2547cd786fe8e8a4
+      --speculative-num-draft-tokens 8
+    )
+    if ! docker image inspect "$image" >/dev/null 2>&1; then
+      echo "DFlash2 image is absent on $DOCKER_HOST: $image" >&2
+      echo "Build the pinned image described in engines/sglang/README.md first." >&2
+      exit 1
+    fi
+    ;;
+  *)
+    usage >&2
+    exit 2
+    ;;
+esac
+
+if docker container inspect "$container" >/dev/null 2>&1; then
+  echo "Container already exists: $container" >&2
+  echo "Stop and remove that exact container before starting the recipe again." >&2
+  exit 1
+fi
+
+docker run -d \
+  --name "$container" \
+  --restart no \
+  --gpus all \
+  --network host \
+  --ipc host \
+  --shm-size 32g \
+  --cpuset-cpus "$cpuset_cpus" \
+  -e HF_HOME=/root/.cache/huggingface \
+  -e SGLANG_CACHE_DIR=/root/.cache/sglang \
+  -e SGLANG_OPT_MAMBA_SKIP_DECODE_LOCK=0 \
+  -v "$hf_cache:/root/.cache/huggingface" \
+  -v "$sglang_cache:/root/.cache/sglang" \
+  "$image" \
+  python3 -m sglang.launch_server \
+    --model-path RadixArk/Qwen3.8-27B-NVFP4 \
+    --revision "$target_revision" \
+    --served-model-name "$served_model" \
+    --trust-remote-code \
+    --mem-fraction-static 0.70 \
+    --attention-backend flashinfer \
+    --chunked-prefill-size 8192 \
+    --disable-prefill-cuda-graph \
+    --kv-cache-dtype fp8_e4m3 \
+    --mamba-ssm-dtype bfloat16 \
+    --mamba-full-memory-ratio 4.21 \
+    --mamba-radix-cache-strategy "$mamba_strategy" \
+    --max-mamba-cache-size "$mamba_cache_size" \
+    --max-running-requests 2 \
+    --context-length 32768 \
+    "${speculative_args[@]}" \
+    --reasoning-parser qwen3 \
+    --tool-call-parser qwen3_coder \
+    --sampling-defaults model \
+    --enable-metrics \
+    --enable-cache-report \
+    --host 0.0.0.0 \
+    --port 8000
+
+echo "Started $container as $served_model"
+echo "Check on the target host: curl -fsS http://127.0.0.1:8000/health"

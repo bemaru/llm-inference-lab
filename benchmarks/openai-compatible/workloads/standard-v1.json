@@ -1,0 +1,36 @@
+{
+  "schema_version": "openai-compatible-workload/v1",
+  "workload_id": "synthetic-mixed-context-v1",
+  "version": "1.0",
+  "description": "Fixed synthetic streaming workload for cross-runtime endpoint characterization; not a product-quality dataset.",
+  "task_class": "deterministic-continuation",
+  "random_seed": 20260821,
+  "cases": [
+    {
+      "id": "short-128",
+      "prompt": "Write positive integers in ascending order starting from 1, separated by one space. Do not add punctuation, headings, explanations, or any other text. Continue until the output limit.",
+      "max_tokens": 128,
+      "temperature": 0
+    },
+    {
+      "id": "medium-context-256",
+      "padding": {
+        "text": "Benchmark context record: alpha beta gamma delta epsilon zeta eta theta. ",
+        "repetitions": 96
+      },
+      "prompt": "Output the word benchmark repeatedly, separated by one space. Do not add punctuation, numbering, explanations, or any other word. Continue until the output limit.",
+      "max_tokens": 256,
+      "temperature": 0
+    },
+    {
+      "id": "long-context-256",
+      "padding": {
+        "text": "Stable reference segment 0123456789 contains no instruction and exists only to create input context. ",
+        "repetitions": 384
+      },
+      "prompt": "Write positive integers in ascending order starting from 1, separated by one space. Do not add punctuation, headings, explanations, or any other text. Continue until the output limit.",
+      "max_tokens": 256,
+      "temperature": 0
+    }
+  ]
+}

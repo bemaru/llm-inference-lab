@@ -1,0 +1,46 @@
+{
+  "hardware": {
+    "system": "NVIDIA DGX Spark",
+    "accelerator": "NVIDIA GB10",
+    "accelerator_count": 1,
+    "memory_gib": 128
+  },
+  "model_artifact": {
+    "id": "publisher/model",
+    "revision": null,
+    "quantization": "record the exact format",
+    "tokenizer_revision": null
+  },
+  "serving": {
+    "engine": "engine name",
+    "version": "exact version or source revision",
+    "image": "registry/image:tag",
+    "image_digest": null,
+    "command_profile": "path to the repository serving recipe",
+    "options": {},
+    "speculative": {
+      "mode": "off",
+      "draft_model": null,
+      "draft_revision": null,
+      "settings": {}
+    }
+  },
+  "software": {
+    "os": null,
+    "kernel": null,
+    "driver": null,
+    "container_runtime": null
+  },
+  "execution": {
+    "benchmark_host": "DGX Spark",
+    "network_path": "server localhost",
+    "cpu_affinity": null
+  },
+  "provenance": {
+    "repository_revision": null,
+    "worktree_dirty": true,
+    "notes": [
+      "Replace null and example values before a retained run."
+    ]
+  }
+}

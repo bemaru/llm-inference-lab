@@ -1,0 +1,19 @@
+# Sanitized example only. The active copy belongs in
+# ~/.config/sparkrun/clusters/dgx-spark-lab.yaml and must not be committed.
+name: dgx-spark-lab
+hosts:
+  - your-host
+description: Single-node DGX Spark inference lab
+cache_dir: /home/your-user/.cache/huggingface
+transfer_mode: delegated
+executor: docker
+executor_config:
+  auto_remove: false
+  privileged: false
+runtime_cache:
+  enabled: true
+  key_by_image: true
+  key_by_model: true
+  dir: /home/your-user/.cache/sparkrun/runtime-cache
+scheduler: occupancy-sparse
+max_gpu_memory_utilization: 0.85

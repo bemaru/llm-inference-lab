@@ -1,0 +1,67 @@
+{
+  "hardware": {
+    "system": "NVIDIA DGX Spark",
+    "accelerator": "NVIDIA GB10",
+    "accelerator_count": 1,
+    "memory_gib": 128
+  },
+  "model_artifact": {
+    "id": "nvidia/Gemma-4-26B-A4B-NVFP4",
+    "revision": "a19cfe00be84568a6867111c9a68c9c44fdcffe6",
+    "quantization": "ModelOpt NVFP4; Marlin weight-only execution on GB10",
+    "tokenizer_revision": "a19cfe00be84568a6867111c9a68c9c44fdcffe6"
+  },
+  "serving": {
+    "engine": "vLLM",
+    "version": "0.19.2rc1.dev134+gfe9c3d6c5.cu130",
+    "image": "vllm/vllm-openai:cu130-nightly",
+    "image_digest": "sha256:3dbe092ec5b2cef63b6104d33fa75d6ce53a7870962529ada69f78bbbc38e776",
+    "command_profile": "engines/vllm/docker-compose.single-node.yml#vllm-gemma4-26b-a4b-nvfp4-candidate",
+    "options": {
+      "tensor_parallel_size": 1,
+      "context_length": 32768,
+      "max_num_seqs": 4,
+      "max_num_batched_tokens": 8192,
+      "gpu_memory_utilization": 0.4,
+      "kv_cache_dtype": "auto",
+      "moe_backend": "marlin",
+      "prefix_caching": true,
+      "chunked_prefill": true,
+      "reasoning_parser": "gemma4",
+      "tool_call_parser": "gemma4",
+      "enforce_eager": true,
+      "served_model_names": [
+        "gemma-4-26b-a4b-nvfp4"
+      ]
+    },
+    "speculative": {
+      "mode": "off",
+      "draft_model": null,
+      "draft_revision": null,
+      "settings": {
+        "num_draft_tokens": null
+      }
+    }
+  },
+  "software": {
+    "os": "Ubuntu 24.04.4 LTS",
+    "kernel": "Linux 6.17.0-1014-nvidia aarch64 GNU/Linux",
+    "driver": "NVIDIA 580.142",
+    "container_runtime": "Docker 29.2.1"
+  },
+  "execution": {
+    "benchmark_host": "NVIDIA DGX Spark",
+    "network_path": "DGX Spark docker0 gateway",
+    "cpu_affinity": null
+  },
+  "provenance": {
+    "repository_revision": "7ebfd0e90d7c5023f4ebe4125fe6ac2243430236",
+    "worktree_dirty": true,
+    "notes": [
+      "A/B variant of the compatibility baseline; only max_num_seqs changes from 2 to 4.",
+      "MTP remains disabled and eager execution remains enabled.",
+      "The image tag is mutable; image_digest is the immutable execution identity.",
+      "Unrelated local changes remain in the operator worktree."
+    ]
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "id": "20260821-qwen38-nvfp4-sglang-mtp-rerun02",
+  "comparison_group": "dgx-spark-quick-2026-08-21",
+  "status": "pass",
+  "promotion": "control",
+  "eligible_for_ranking": true,
+  "model": {
+    "display_name": "Qwen3.8 27B NVFP4 · SGLang MTP",
+    "family": "Qwen3.8",
+    "architecture": "dense",
+    "total_parameters_b": 27,
+    "active_parameters_b": 27
+  },
+  "artifact": {
+    "publisher": "RadixArk",
+    "license": "실행 기록에 미기재",
+    "commercial_use": "not_recorded"
+  },
+  "answer_quality": "not_run",
+  "notes": [
+    "동일 조건 canonical 재측정에서 Tool Calling 18/18을 통과했습니다.",
+    "closed-loop 네 요청이 모두 256-token length 종료되어 총 1,024 tokens를 생성했습니다."
+  ],
+  "provenance": {
+    "measurement_scope": "DGX Spark localhost의 SGLang MTP canonical Quick rerun",
+    "source_record_sha256": "5f1aeca2015ef3ba04ef809574073546a8148107357e15efd0da95197ea4fb68"
+  }
+}

@@ -1,0 +1,104 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+usage() {
+  cat <<'EOF'
+Usage: run-characterization-remote --output FILE [--metadata-file FILE] --host SSH_ALIAS -- CHARACTERIZE_ARGS...
+
+Copies the characterization client and fixed workload to a temporary directory
+on the remote host, runs it there, and atomically retains the complete result on
+the local machine. Do not pass characterize.py's --output or --print-result.
+EOF
+}
+
+host="${SSH_TARGET:-}"
+metadata_file=""
+output_file=""
+
+while (( $# )); do
+  case "$1" in
+    --host)
+      host="${2:?missing value for --host}"
+      shift 2
+      ;;
+    --metadata-file)
+      metadata_file="${2:?missing value for --metadata-file}"
+      shift 2
+      ;;
+    --output)
+      output_file="${2:?missing value for --output}"
+      shift 2
+      ;;
+    --)
+      shift
+      break
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "Unknown wrapper option: $1" >&2
+      usage >&2
+      exit 2
+      ;;
+  esac
+done
+
+if [[ -z "$host" || -z "$output_file" || $# -eq 0 ]]; then
+  usage >&2
+  exit 2
+fi
+if [[ -n "$metadata_file" && ! -f "$metadata_file" ]]; then
+  echo "Metadata file does not exist: $metadata_file" >&2
+  exit 2
+fi
+for argument in "$@"; do
+  if [[ "$argument" == "--output" || "$argument" == "--print-result" ]]; then
+    echo "The remote wrapper owns result capture; do not pass $argument" >&2
+    exit 2
+  fi
+done
+
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+output_dir="$(dirname -- "$output_file")"
+mkdir -p "$output_dir"
+temporary_output="$(mktemp "$output_dir/.characterization-result.XXXXXX.tmp")"
+
+cleanup_local() {
+  rm -f -- "$temporary_output"
+}
+trap cleanup_local EXIT
+
+remote_command='set -e; remote_dir="$(mktemp -d -t llm-characterize.XXXXXXXX)"; cleanup_remote() { rm -f -- "$remote_dir/characterize.py" "$remote_dir/quick_check.py" "$remote_dir/workloads/standard-v1.json"; rmdir -- "$remote_dir/workloads" "$remote_dir" 2>/dev/null || true; }; trap cleanup_remote EXIT; tar -xf - -C "$remote_dir"; cd "$remote_dir";'
+if [[ -n "$metadata_file" ]]; then
+  metadata_b64="$(base64 -w0 -- "$metadata_file")"
+  printf -v invocation ' env %q=%q python3 characterize.py' "LLM_BENCHMARK_METADATA_B64" "$metadata_b64"
+else
+  invocation=' python3 characterize.py'
+fi
+remote_command+="$invocation"
+for argument in "$@"; do
+  printf -v quoted_argument ' %q' "$argument"
+  remote_command+="$quoted_argument"
+done
+
+set +e
+tar -C "$script_dir" -cf - characterize.py quick_check.py workloads/standard-v1.json \
+  | ssh -o ServerAliveInterval=30 -o ServerAliveCountMax=6 "$host" "$remote_command" > "$temporary_output"
+benchmark_status=$?
+set -e
+
+if ! python3 -m json.tool "$temporary_output" >/dev/null; then
+  invalid_output="${output_file}.invalid"
+  mv -- "$temporary_output" "$invalid_output"
+  trap - EXIT
+  echo "Remote output was not valid JSON; retained at $invalid_output" >&2
+  exit 2
+fi
+
+mv -- "$temporary_output" "$output_file"
+trap - EXIT
+echo "Wrote $output_file"
+exit "$benchmark_status"

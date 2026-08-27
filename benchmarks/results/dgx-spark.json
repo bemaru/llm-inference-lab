@@ -1,0 +1,1384 @@
+{
+  "$schema": "run-set.schema.json",
+  "schema_version": "1.0",
+  "observed_through": "2026-08-25",
+  "platform": {
+    "id": "nvidia-dgx-spark-gb10-128gb",
+    "display_name": "NVIDIA DGX Spark",
+    "accelerator": "GB10",
+    "accelerator_count": 1,
+    "memory_gib": 128
+  },
+  "comparison_groups": {
+    "dgx-spark-quick-2026-08-21": {
+      "label": "OpenAI-compatible Quick benchmark · 2026-08-21",
+      "classification": "quick",
+      "comparison_level": "directional",
+      "workload": "DGX Spark localhost에서 256-token synthetic repeated-token output, streaming sample 3회, concurrency 2 closed-loop request 4건 및 deterministic Tool schema를 사용",
+      "limitations": [
+        "단일 Quick run 결과이며 신뢰구간과 지속 부하 구간을 포함하지 않습니다.",
+        "반복 토큰 출력은 speculative decoding에 유리한 workload입니다.",
+        "Qwen3.6은 vLLM 0.24.0, 신규 후보는 vLLM 0.27.1을 사용했으므로 런타임이 통제된 비교가 아닙니다.",
+        "SGLang DSpark와 DFlash2의 closed-loop 요청은 생성 token 수와 finish reason이 달라 aggregate throughput 순위에서 제외했습니다.",
+        "DFlash2 custom image의 초기 66.755 decode tok/s는 canonical 재측정에서 재현되지 않았습니다.",
+        "답변 품질, 한국어 답변 품질, open-loop goodput 및 application workflow는 측정하지 않았습니다."
+      ]
+    },
+    "dgx-spark-gemma4-sequential-quick-2026-08": {
+      "label": "Gemma4 sequential-output Quick benchmark · 2026-08",
+      "classification": "quick",
+      "comparison_level": "directional",
+      "workload": "DGX Spark localhost에서 sequential-integer 256-token output, streaming sample 3회, concurrency 2 closed-loop request 4건 및 deterministic Tool schema를 사용",
+      "limitations": [
+        "기존 vLLM 후보의 repeated-word workload와 출력 프롬프트가 달라 직접 비교할 수 없습니다.",
+        "단일 Quick run 결과이며 신뢰구간과 지속 부하 구간을 포함하지 않습니다.",
+        "Ollama와 vLLM은 런타임, 양자화 형식 및 요청 호환 옵션이 달라 결과는 serving stack의 방향성 비교입니다.",
+        "Ollama는 chat_template_kwargs를 전송하지 않았고 vLLM은 enable_thinking=false를 전송했습니다.",
+        "답변 품질, 한국어 답변 품질, open-loop goodput 및 application workflow는 측정하지 않았습니다."
+      ]
+    },
+    "dgx-spark-historical-smoke-2026-05-01": {
+      "label": "Gemma4 BF16 API smoke (과거 측정) · 2026-05-01",
+      "classification": "smoke",
+      "comparison_level": "not_comparable",
+      "workload": "장시간 실행 중인 Gemma4 BF16 서비스에 non-streaming 160-token chat request 1건을 요청",
+      "limitations": [
+        "현재 Quick benchmark와 workload, context length, concurrency 및 co-located memory 조건이 다릅니다.",
+        "기록된 generation throughput은 server log snapshot이며 현재 Quick benchmark의 client metric과 직접 비교할 수 없습니다."
+      ]
+    }
+  },
+  "runs": [
+    {
+      "id": "20260821-nemotron35-nvfp4-dspark-n3",
+      "observed_on": "2026-08-21",
+      "comparison_group": "dgx-spark-quick-2026-08-21",
+      "status": "pass",
+      "promotion": "advance",
+      "eligible_for_ranking": true,
+      "model": {
+        "display_name": "Nemotron 3.5 Lightning 30B-A3B",
+        "family": "Nemotron 3.5",
+        "architecture": "hybrid-moe",
+        "total_parameters_b": 30,
+        "active_parameters_b": 3
+      },
+      "artifact": {
+        "publisher": "NVIDIA",
+        "model_id": "nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4",
+        "revision": "e8f3c7c4de75ad84fe1bcef95d38eca76214480b",
+        "quantization": "ModelOpt NVFP4 target + NVFP4 DSpark draft",
+        "license": "OpenMDW License Agreement 1.1",
+        "commercial_use": "allowed"
+      },
+      "serving": {
+        "engine": "vLLM",
+        "version": "0.27.1",
+        "image": "vllm/vllm-openai:v0.27.1-ubuntu2404",
+        "image_digest": "sha256:6a278041c910af1a6db0f3555aac30dbdf93d7acb01008656d99007cf7781a3a",
+        "profile": "nemotron35-nvfp4-candidate",
+        "options": {
+          "tensor_parallel_size": 1,
+          "max_model_len": 32768,
+          "max_num_seqs": 2,
+          "max_num_batched_tokens": 8192,
+          "gpu_memory_utilization": 0.4,
+          "kv_cache_dtype": "fp8",
+          "moe_backend": "marlin",
+          "mamba_backend": "flashinfer/align",
+          "prefix_caching": true,
+          "chunked_prefill": true,
+          "tool_call_parser": "qwen3_coder",
+          "reasoning_parser": "nemotron_v3"
+        },
+        "speculative": {
+          "mode": "external-draft",
+          "draft_model": "nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4-DSpark@d10c6ff40d6e69d1f92e407e027de3eafdb77645",
+          "num_tokens": 3,
+          "acceptance_pct": 99.43
+        }
+      },
+      "validation": {
+        "api": "pass",
+        "chat": "pass",
+        "tool_simple": {
+          "passed": 6,
+          "attempts": 6
+        },
+        "tool_nested": {
+          "passed": 6,
+          "attempts": 6
+        },
+        "tool_large_surface": {
+          "passed": 6,
+          "attempts": 6
+        },
+        "answer_quality": "not_run"
+      },
+      "metrics": {
+        "ttft_p50_ms": 147,
+        "ttft_p95_ms": 213,
+        "tpot_p50_ms": 7.253,
+        "e2e_p50_s": 2.001,
+        "single_user_decode_tps_p50": 137.874,
+        "aggregate_output_tps": 221.477,
+        "concurrency": 2,
+        "request_throughput_rps": 0.865,
+        "accelerator_process_memory_mib": 47781,
+        "host_available_memory_gib": 58
+      },
+      "notes": [
+        "측정 가능한 후보 중 Quick benchmark 성능이 가장 높았습니다.",
+        "모델 카드의 지원 언어 목록에 한국어가 포함되지 않아 한국어 답변 품질 검증이 필요합니다.",
+        "Synthetic output에서 draft acceptance가 비정상적으로 높게 관측되었습니다."
+      ],
+      "provenance": {
+        "measurement_scope": "DGX Spark localhost에서 OpenAI-compatible quick_check.py로 측정",
+        "source_record_sha256": "ea5bb20cb7aa000e0eaa7e47465b807d3ed271ff0a6d6f0bbb06547c651f089a"
+      }
+    },
+    {
+      "id": "20260821-qwen36-nvfp4-mtp-n3",
+      "observed_on": "2026-08-21",
+      "comparison_group": "dgx-spark-quick-2026-08-21",
+      "status": "pass",
+      "promotion": "control",
+      "eligible_for_ranking": true,
+      "model": {
+        "display_name": "Qwen3.6 35B-A3B",
+        "family": "Qwen3.6",
+        "architecture": "moe",
+        "total_parameters_b": 35,
+        "active_parameters_b": 3
+      },
+      "artifact": {
+        "publisher": "NVIDIA",
+        "model_id": "nvidia/Qwen3.6-35B-A3B-NVFP4",
+        "revision": "491c2f1ea524c639598bf8fa787a93fed5a6fbce",
+        "quantization": "ModelOpt NVFP4, Marlin weight-only FP4 path",
+        "license": "실행 기록에 미기재",
+        "commercial_use": "not_recorded"
+      },
+      "serving": {
+        "engine": "vLLM",
+        "version": "0.24.0",
+        "image": "vllm/vllm-openai:v0.24.0-ubuntu2404",
+        "image_digest": "sha256:bfdefe75b5c3fb83f4f0fcaae8f39fac87941cbadb05cd2203f44a1689236c71",
+        "profile": "qwen36-nvfp4-mtp",
+        "options": {
+          "tensor_parallel_size": 1,
+          "max_model_len": 32768,
+          "max_num_seqs": 2,
+          "max_num_batched_tokens": 8192,
+          "gpu_memory_utilization": 0.4,
+          "kv_cache_dtype": "fp8",
+          "attention_backend": "flashinfer",
+          "moe_backend": "marlin",
+          "prefix_caching": true,
+          "chunked_prefill": true,
+          "async_scheduling": true,
+          "tool_call_parser": "qwen3_xml",
+          "reasoning_parser": "qwen3",
+          "thinking": false
+        },
+        "speculative": {
+          "mode": "mtp",
+          "draft_model": null,
+          "num_tokens": 3,
+          "acceptance_pct": 99.48
+        }
+      },
+      "validation": {
+        "api": "pass",
+        "chat": "pass",
+        "tool_simple": {
+          "passed": 6,
+          "attempts": 6
+        },
+        "tool_nested": {
+          "passed": 6,
+          "attempts": 6
+        },
+        "tool_large_surface": {
+          "passed": 6,
+          "attempts": 6
+        },
+        "answer_quality": "not_run"
+      },
+      "metrics": {
+        "ttft_p50_ms": 182,
+        "ttft_p95_ms": null,
+        "tpot_p50_ms": 10.119,
+        "e2e_p50_s": 2.761,
+        "single_user_decode_tps_p50": 98.828,
+        "aggregate_output_tps": 98.453,
+        "concurrency": 2,
+        "request_throughput_rps": 0.385,
+        "accelerator_process_memory_mib": 71038,
+        "host_available_memory_gib": 36
+      },
+      "notes": [
+        "후속 benchmark의 비교 기준입니다.",
+        "MTP는 synthetic decode 성능을 높였지만 accelerator memory allocation을 약 23 GiB 증가시켰습니다.",
+        "Synthetic output에서 draft acceptance가 비정상적으로 높게 관측되었습니다."
+      ],
+      "provenance": {
+        "measurement_scope": "DGX Spark localhost에서 OpenAI-compatible quick_check.py로 측정",
+        "source_record_sha256": "924a3038cea5116e9ac97ab3898f3ef74f9d14a7bfb1412298e3f0e311268170"
+      }
+    },
+    {
+      "id": "20260821-qwen36-nvfp4-mtp-off",
+      "observed_on": "2026-08-21",
+      "comparison_group": "dgx-spark-quick-2026-08-21",
+      "status": "pass",
+      "promotion": "control",
+      "eligible_for_ranking": true,
+      "model": {
+        "display_name": "Qwen3.6 35B-A3B",
+        "family": "Qwen3.6",
+        "architecture": "moe",
+        "total_parameters_b": 35,
+        "active_parameters_b": 3
+      },
+      "artifact": {
+        "publisher": "NVIDIA",
+        "model_id": "nvidia/Qwen3.6-35B-A3B-NVFP4",
+        "revision": "491c2f1ea524c639598bf8fa787a93fed5a6fbce",
+        "quantization": "ModelOpt NVFP4, Marlin weight-only FP4 path",
+        "license": "실행 기록에 미기재",
+        "commercial_use": "not_recorded"
+      },
+      "serving": {
+        "engine": "vLLM",
+        "version": "0.24.0",
+        "image": "vllm/vllm-openai:v0.24.0-ubuntu2404",
+        "image_digest": "sha256:bfdefe75b5c3fb83f4f0fcaae8f39fac87941cbadb05cd2203f44a1689236c71",
+        "profile": "qwen36-nvfp4",
+        "options": {
+          "tensor_parallel_size": 1,
+          "max_model_len": 32768,
+          "max_num_seqs": 2,
+          "max_num_batched_tokens": 8192,
+          "gpu_memory_utilization": 0.4,
+          "kv_cache_dtype": "fp8",
+          "attention_backend": "flashinfer",
+          "moe_backend": "marlin",
+          "prefix_caching": true,
+          "chunked_prefill": true,
+          "async_scheduling": true,
+          "tool_call_parser": "qwen3_xml",
+          "reasoning_parser": "qwen3",
+          "thinking": false
+        },
+        "speculative": {
+          "mode": "off",
+          "draft_model": null,
+          "num_tokens": null,
+          "acceptance_pct": null
+        }
+      },
+      "validation": {
+        "api": "pass",
+        "chat": "pass",
+        "tool_simple": {
+          "passed": 6,
+          "attempts": 6
+        },
+        "tool_nested": {
+          "passed": 6,
+          "attempts": 6
+        },
+        "tool_large_surface": {
+          "passed": 6,
+          "attempts": 6
+        },
+        "answer_quality": "not_run"
+      },
+      "metrics": {
+        "ttft_p50_ms": 131,
+        "ttft_p95_ms": 187,
+        "tpot_p50_ms": 21.846,
+        "e2e_p50_s": 5.724,
+        "single_user_decode_tps_p50": 45.774,
+        "aggregate_output_tps": 70.992,
+        "concurrency": 2,
+        "request_throughput_rps": 0.277,
+        "accelerator_process_memory_mib": 47992,
+        "host_available_memory_gib": 56
+      },
+      "notes": [
+        "Qwen3.6 MTP 효과를 비교하기 위한 control 구성입니다.",
+        "MTP 구성보다 host memory 여유가 컸습니다."
+      ],
+      "provenance": {
+        "measurement_scope": "DGX Spark localhost에서 OpenAI-compatible quick_check.py로 측정",
+        "source_record_sha256": "99c55f2b2090206055c61f47411ec86756156f14e8d2064d7ace8e2099f825f2"
+      }
+    },
+    {
+      "id": "20260821-qwen38-fp8-mtp-n3",
+      "observed_on": "2026-08-21",
+      "comparison_group": "dgx-spark-quick-2026-08-21",
+      "status": "pass",
+      "promotion": "reference",
+      "eligible_for_ranking": true,
+      "model": {
+        "display_name": "Qwen3.8 27B",
+        "family": "Qwen3.8",
+        "architecture": "dense",
+        "total_parameters_b": 27,
+        "active_parameters_b": 27
+      },
+      "artifact": {
+        "publisher": "Qwen",
+        "model_id": "Qwen/Qwen3.8-27B-FP8",
+        "revision": "017b9c7af6b5689d5dd426a76e0bc077eb5ca20a",
+        "quantization": "Block FP8, 128-element block size",
+        "license": "실행 기록에 미기재",
+        "commercial_use": "not_recorded"
+      },
+      "serving": {
+        "engine": "vLLM",
+        "version": "0.27.1",
+        "image": "vllm/vllm-openai:v0.27.1-ubuntu2404",
+        "image_digest": "sha256:6a278041c910af1a6db0f3555aac30dbdf93d7acb01008656d99007cf7781a3a",
+        "profile": "qwen38-fp8-candidate",
+        "options": {
+          "tensor_parallel_size": 1,
+          "max_model_len": 32768,
+          "max_num_seqs": 2,
+          "max_num_batched_tokens": 8192,
+          "gpu_memory_utilization": 0.4,
+          "kv_cache_dtype": "fp8",
+          "prefix_caching": true,
+          "chunked_prefill": true,
+          "async_scheduling": true,
+          "tool_call_parser": "qwen3_coder",
+          "reasoning_parser": "qwen3",
+          "thinking": false
+        },
+        "speculative": {
+          "mode": "mtp",
+          "draft_model": null,
+          "num_tokens": 3,
+          "acceptance_pct": 92.07
+        }
+      },
+      "validation": {
+        "api": "pass",
+        "chat": "pass",
+        "tool_simple": {
+          "passed": 6,
+          "attempts": 6
+        },
+        "tool_nested": {
+          "passed": 6,
+          "attempts": 6
+        },
+        "tool_large_surface": {
+          "passed": 6,
+          "attempts": 6
+        },
+        "answer_quality": "not_run"
+      },
+      "metrics": {
+        "ttft_p50_ms": 472,
+        "ttft_p95_ms": 511,
+        "tpot_p50_ms": 63.612,
+        "e2e_p50_s": 16.703,
+        "single_user_decode_tps_p50": 15.72,
+        "aggregate_output_tps": 27.589,
+        "concurrency": 2,
+        "request_throughput_rps": 0.108,
+        "accelerator_process_memory_mib": 46936,
+        "host_available_memory_gib": 60
+      },
+      "notes": [
+        "Dense 모델의 품질 비교 기준으로 유지하며 interactive TPS 후보로는 선정하지 않았습니다.",
+        "측정 런타임에서 FP8 KV-cache scaling calibration이 적용되지 않았습니다."
+      ],
+      "provenance": {
+        "measurement_scope": "DGX Spark localhost에서 OpenAI-compatible quick_check.py로 측정",
+        "source_record_sha256": "59d679283bec790c4aa7fa35e00e87c5b88d7ae69a8f5a71377d78172a94be3a"
+      }
+    },
+    {
+      "id": "20260821-exaone45-awq-mtp-off",
+      "observed_on": "2026-08-21",
+      "comparison_group": "dgx-spark-quick-2026-08-21",
+      "status": "partial",
+      "promotion": "reject",
+      "eligible_for_ranking": false,
+      "model": {
+        "display_name": "EXAONE 4.5 33B",
+        "family": "EXAONE 4.5",
+        "architecture": "dense",
+        "total_parameters_b": 33,
+        "active_parameters_b": 33
+      },
+      "artifact": {
+        "publisher": "LG AI Research",
+        "model_id": "LGAI-EXAONE/EXAONE-4.5-33B-AWQ",
+        "revision": "31e6a965d0661bbe4a8b895e22a77f8271772ba0",
+        "quantization": "4-bit AWQ via compressed-tensors and Marlin",
+        "license": "EXAONE AI Model License Agreement 1.2 - NC",
+        "commercial_use": "not_allowed"
+      },
+      "serving": {
+        "engine": "vLLM",
+        "version": "0.27.1",
+        "image": "vllm/vllm-openai:v0.27.1-ubuntu2404",
+        "image_digest": "sha256:6a278041c910af1a6db0f3555aac30dbdf93d7acb01008656d99007cf7781a3a",
+        "profile": "exaone45-awq-candidate",
+        "options": {
+          "tensor_parallel_size": 1,
+          "max_model_len": 32768,
+          "max_num_seqs": 2,
+          "max_num_batched_tokens": 8192,
+          "gpu_memory_utilization": 0.4,
+          "kv_cache_dtype": "fp8",
+          "prefix_caching": true,
+          "chunked_prefill": true,
+          "async_scheduling": true,
+          "tool_call_parser": "hermes",
+          "reasoning_parser": "qwen3",
+          "thinking": false
+        },
+        "speculative": {
+          "mode": "off",
+          "draft_model": null,
+          "num_tokens": null,
+          "acceptance_pct": null
+        }
+      },
+      "validation": {
+        "api": "pass",
+        "chat": "pass",
+        "tool_simple": {
+          "passed": 6,
+          "attempts": 6
+        },
+        "tool_nested": {
+          "passed": 0,
+          "attempts": 6
+        },
+        "tool_large_surface": {
+          "passed": 6,
+          "attempts": 6
+        },
+        "answer_quality": "not_run"
+      },
+      "metrics": {
+        "ttft_p50_ms": 131,
+        "ttft_p95_ms": null,
+        "tpot_p50_ms": 117.054,
+        "e2e_p50_s": 29.978,
+        "single_user_decode_tps_p50": 8.543,
+        "aggregate_output_tps": 17.057,
+        "concurrency": 2,
+        "request_throughput_rps": null,
+        "accelerator_process_memory_mib": 36531,
+        "host_available_memory_gib": 72
+      },
+      "notes": [
+        "Nested Tool Calling이 6회 모두 실패했습니다.",
+        "비상업용 checkpoint이므로 한국어 benchmark 참고 모델로만 유지합니다.",
+        "MTP off 구성이 모델 카드 권장 MTP n3 구성보다 빨랐습니다."
+      ],
+      "provenance": {
+        "measurement_scope": "EXAONE Quick run log에 기록된 A/B 측정",
+        "source_record_sha256": "7fa6d9b285a948156dc4c6f3a95a83bf988caf1860a20c8edc0a13273b19d175"
+      }
+    },
+    {
+      "id": "20260821-exaone45-awq-mtp-n3",
+      "observed_on": "2026-08-21",
+      "comparison_group": "dgx-spark-quick-2026-08-21",
+      "status": "partial",
+      "promotion": "reject",
+      "eligible_for_ranking": false,
+      "model": {
+        "display_name": "EXAONE 4.5 33B",
+        "family": "EXAONE 4.5",
+        "architecture": "dense",
+        "total_parameters_b": 33,
+        "active_parameters_b": 33
+      },
+      "artifact": {
+        "publisher": "LG AI Research",
+        "model_id": "LGAI-EXAONE/EXAONE-4.5-33B-AWQ",
+        "revision": "31e6a965d0661bbe4a8b895e22a77f8271772ba0",
+        "quantization": "4-bit AWQ via compressed-tensors and Marlin",
+        "license": "EXAONE AI Model License Agreement 1.2 - NC",
+        "commercial_use": "not_allowed"
+      },
+      "serving": {
+        "engine": "vLLM",
+        "version": "0.27.1",
+        "image": "vllm/vllm-openai:v0.27.1-ubuntu2404",
+        "image_digest": "sha256:6a278041c910af1a6db0f3555aac30dbdf93d7acb01008656d99007cf7781a3a",
+        "profile": "diagnostic EXAONE MTP n3 A/B; not retained",
+        "options": {
+          "tensor_parallel_size": 1,
+          "max_model_len": 32768,
+          "max_num_seqs": 2,
+          "max_num_batched_tokens": 8192,
+          "gpu_memory_utilization": 0.4,
+          "kv_cache_dtype": "fp8",
+          "prefix_caching": true,
+          "chunked_prefill": true,
+          "async_scheduling": true,
+          "tool_call_parser": "hermes",
+          "reasoning_parser": "qwen3",
+          "thinking": false
+        },
+        "speculative": {
+          "mode": "mtp",
+          "draft_model": null,
+          "num_tokens": 3,
+          "acceptance_pct": 0.088
+        }
+      },
+      "validation": {
+        "api": "pass",
+        "chat": "pass",
+        "tool_simple": {
+          "passed": 1,
+          "attempts": 1
+        },
+        "tool_nested": {
+          "passed": 0,
+          "attempts": 1
+        },
+        "tool_large_surface": {
+          "passed": 1,
+          "attempts": 1
+        },
+        "answer_quality": "not_run"
+      },
+      "metrics": {
+        "ttft_p50_ms": 286,
+        "ttft_p95_ms": null,
+        "tpot_p50_ms": 180.47,
+        "e2e_p50_s": 46.315,
+        "single_user_decode_tps_p50": 5.541,
+        "aggregate_output_tps": 11.046,
+        "concurrency": 2,
+        "request_throughput_rps": null,
+        "accelerator_process_memory_mib": 36343,
+        "host_available_memory_gib": 71
+      },
+      "notes": [
+        "관측된 draft token의 0.088%만 수락되어 A/B 후보에서 제외했습니다.",
+        "Nested Tool Calling이 실패했고 checkpoint는 비상업용입니다."
+      ],
+      "provenance": {
+        "measurement_scope": "EXAONE Quick run log에 기록된 A/B 측정",
+        "source_record_sha256": "7fa6d9b285a948156dc4c6f3a95a83bf988caf1860a20c8edc0a13273b19d175"
+      }
+    },
+    {
+      "id": "20260821-gemma4-nvfp4-vllm0271",
+      "observed_on": "2026-08-21",
+      "comparison_group": "dgx-spark-quick-2026-08-21",
+      "status": "blocked",
+      "promotion": "blocked",
+      "eligible_for_ranking": false,
+      "model": {
+        "display_name": "Gemma4 26B-A4B",
+        "family": "Gemma4",
+        "architecture": "moe",
+        "total_parameters_b": 25.2,
+        "active_parameters_b": 3.8
+      },
+      "artifact": {
+        "publisher": "NVIDIA",
+        "model_id": "nvidia/Gemma-4-26B-A4B-NVFP4",
+        "revision": "a19cfe00be84568a6867111c9a68c9c44fdcffe6",
+        "quantization": "ModelOpt NVFP4 experts-only",
+        "license": "실행 기록에 미기재",
+        "commercial_use": "not_recorded"
+      },
+      "serving": {
+        "engine": "vLLM",
+        "version": "0.27.1",
+        "image": "vllm/vllm-openai:v0.27.1-ubuntu2404",
+        "image_digest": "sha256:6a278041c910af1a6db0f3555aac30dbdf93d7acb01008656d99007cf7781a3a",
+        "profile": "gemma4-nvfp4-candidate",
+        "options": {
+          "tensor_parallel_size": 1,
+          "max_model_len": 32768,
+          "max_num_seqs": 2,
+          "max_num_batched_tokens": 8192,
+          "gpu_memory_utilization": 0.4,
+          "kv_cache_dtype": "auto",
+          "prefix_caching": true,
+          "chunked_prefill": true,
+          "async_scheduling": true,
+          "tool_call_parser": "gemma4",
+          "reasoning_parser": "gemma4"
+        },
+        "speculative": {
+          "mode": "off",
+          "draft_model": null,
+          "num_tokens": null,
+          "acceptance_pct": null
+        }
+      },
+      "validation": {
+        "api": "fail",
+        "chat": "not_run",
+        "tool_simple": {
+          "passed": 0,
+          "attempts": 0
+        },
+        "tool_nested": {
+          "passed": 0,
+          "attempts": 0
+        },
+        "tool_large_surface": {
+          "passed": 0,
+          "attempts": 0
+        },
+        "answer_quality": "not_run"
+      },
+      "metrics": {
+        "ttft_p50_ms": null,
+        "ttft_p95_ms": null,
+        "tpot_p50_ms": null,
+        "e2e_p50_s": null,
+        "single_user_decode_tps_p50": null,
+        "aggregate_output_tps": null,
+        "concurrency": null,
+        "request_throughput_rps": null,
+        "accelerator_process_memory_mib": null,
+        "host_available_memory_gib": null
+      },
+      "notes": [
+        "Heterogeneous head_dim 및 weight shape 호환성 오류로 API 준비 전에 중단되었습니다.",
+        "이전 Gemma4 development image도 현재 checkpoint layout을 처리하지 못했습니다.",
+        "호환성이 확인된 공식 runtime이 제공될 때만 재검증합니다."
+      ],
+      "provenance": {
+        "measurement_scope": "호환성 검증만 수행했으며 성능은 측정하지 않음",
+        "source_record_sha256": "fceefbb4c0ef73f470643e5f262a5a9999d78aa17e7bd6b3c4fb295549f76940"
+      }
+    },
+    {
+      "id": "20260821-gemma4-26b-q4-k-m-ollama",
+      "observed_on": "2026-08-21",
+      "comparison_group": "dgx-spark-gemma4-sequential-quick-2026-08",
+      "status": "pass",
+      "promotion": "reference",
+      "eligible_for_ranking": true,
+      "model": {
+        "display_name": "Gemma4 26B-A4B Q4_K_M",
+        "family": "Gemma4",
+        "architecture": "moe",
+        "total_parameters_b": 25.8,
+        "active_parameters_b": 3.8
+      },
+      "artifact": {
+        "publisher": "Google / Ollama Library",
+        "model_id": "registry.ollama.ai/library/gemma4:26b-a4b-it-q4_K_M",
+        "revision": "5571076f3d70050487b26b341705799e0ab29b808164f90d20d4cf84f699d251",
+        "quantization": "GGUF Q4_K_M",
+        "license": "Apache License 2.0",
+        "commercial_use": "allowed"
+      },
+      "serving": {
+        "engine": "Ollama",
+        "version": "0.23.1",
+        "image": "ollama/ollama:latest",
+        "image_digest": "sha256:6077dbbd6508dce8973f8b91c30d8026b1279ab0483e15f0dfad469dba676c2f",
+        "profile": "gemma4-q4-k-m",
+        "options": {
+          "context_length": 32768,
+          "num_parallel": 2,
+          "max_loaded_models": 1,
+          "keep_alive": "30m",
+          "flash_attention": true,
+          "host": "127.0.0.1:11434",
+          "reasoning_effort": "none",
+          "chat_template_kwargs": false,
+          "performance_prompt_profile": "sequential-integers"
+        },
+        "speculative": {
+          "mode": "off",
+          "draft_model": null,
+          "num_tokens": null,
+          "acceptance_pct": null
+        }
+      },
+      "validation": {
+        "api": "pass",
+        "chat": "pass",
+        "tool_simple": {
+          "passed": 6,
+          "attempts": 6
+        },
+        "tool_nested": {
+          "passed": 6,
+          "attempts": 6
+        },
+        "tool_large_surface": {
+          "passed": 6,
+          "attempts": 6
+        },
+        "answer_quality": "not_run"
+      },
+      "metrics": {
+        "ttft_p50_ms": 842,
+        "ttft_p95_ms": 1202,
+        "tpot_p50_ms": 31.719,
+        "e2e_p50_s": 8.93,
+        "single_user_decode_tps_p50": 31.527,
+        "aggregate_output_tps": 20.451,
+        "concurrency": 2,
+        "request_throughput_rps": 0.08,
+        "accelerator_process_memory_mib": 20569,
+        "host_available_memory_gib": 89
+      },
+      "notes": [
+        "API, chat 및 deterministic Tool schema 3종을 모두 통과했습니다.",
+        "기존 repeated-word workload는 Ollama에서 조기 종료와 0-token usage를 반환해 sequential-integer workload를 별도 비교 그룹으로 측정했습니다.",
+        "vLLM NVFP4 호환성 실패와 별개인 Ollama GGUF 기준점이며 직접 성능 비교 대상은 아닙니다.",
+        "답변 품질과 application workflow는 아직 검증하지 않았습니다."
+      ],
+      "provenance": {
+        "measurement_scope": "DGX Spark localhost의 Ollama OpenAI-compatible endpoint에서 별도 sequential-output Quick run으로 측정",
+        "source_record_sha256": "99ec6e87594c2c1e59eed3c58b62391f1721b1b0383fc9f9350678c09aae9e79"
+      }
+    },
+    {
+      "id": "20260501-gemma4-bf16-smoke",
+      "observed_on": "2026-05-01",
+      "comparison_group": "dgx-spark-historical-smoke-2026-05-01",
+      "status": "pass",
+      "promotion": "historical",
+      "eligible_for_ranking": false,
+      "model": {
+        "display_name": "Gemma4 26B-A4B",
+        "family": "Gemma4",
+        "architecture": "moe",
+        "total_parameters_b": 25.2,
+        "active_parameters_b": 3.8
+      },
+      "artifact": {
+        "publisher": "Google",
+        "model_id": "google/gemma-4-26B-A4B-it",
+        "revision": null,
+        "quantization": "BF16 Hugging Face checkpoint",
+        "license": "실행 기록에 미기재",
+        "commercial_use": "not_recorded"
+      },
+      "serving": {
+        "engine": "vLLM",
+        "version": "0.18.2rc1.dev73+gdb7a17ecc",
+        "image": "vllm/vllm-openai:gemma4-cu130",
+        "image_digest": null,
+        "profile": "gemma4-26b-bf16 historical service",
+        "options": {
+          "tensor_parallel_size": 1,
+          "max_model_len": 2048,
+          "max_num_seqs": 1,
+          "gpu_memory_utilization": 0.6,
+          "enforce_eager": true,
+          "multimodal_input": false
+        },
+        "speculative": {
+          "mode": "off",
+          "draft_model": null,
+          "num_tokens": null,
+          "acceptance_pct": null
+        }
+      },
+      "validation": {
+        "api": "pass",
+        "chat": "pass",
+        "tool_simple": {
+          "passed": 0,
+          "attempts": 0
+        },
+        "tool_nested": {
+          "passed": 0,
+          "attempts": 0
+        },
+        "tool_large_surface": {
+          "passed": 0,
+          "attempts": 0
+        },
+        "answer_quality": "not_run"
+      },
+      "metrics": {
+        "ttft_p50_ms": null,
+        "ttft_p95_ms": null,
+        "tpot_p50_ms": null,
+        "e2e_p50_s": 8.196,
+        "single_user_decode_tps_p50": null,
+        "aggregate_output_tps": null,
+        "concurrency": 1,
+        "request_throughput_rps": null,
+        "accelerator_process_memory_mib": 75165,
+        "host_available_memory_gib": 6.1
+      },
+      "notes": [
+        "동일 하드웨어 계열에서 Gemma4 BF16 서빙이 과거에 성공했음을 확인하는 기록입니다.",
+        "2026-08-21 Quick benchmark와 직접 비교할 수 없습니다.",
+        "메모리 사용량이 큰 다른 서비스와 함께 실행할 때 사용 가능한 host memory가 약 6 GiB에 불과했습니다."
+      ],
+      "provenance": {
+        "measurement_scope": "과거 direct API smoke 및 server metric snapshot",
+        "source_record_sha256": "bd271c9b4999bacda7087d804997eb2e78d1cb27fb14d067fb9ffb41d2218345"
+      }
+    },
+    {
+      "id": "20260821-qwen38-nvfp4-sglang-mtp-rerun02",
+      "observed_on": "2026-08-21",
+      "comparison_group": "dgx-spark-quick-2026-08-21",
+      "status": "pass",
+      "promotion": "control",
+      "eligible_for_ranking": true,
+      "model": {
+        "display_name": "Qwen3.8 27B NVFP4 · SGLang MTP",
+        "family": "Qwen3.8",
+        "architecture": "dense",
+        "total_parameters_b": 27,
+        "active_parameters_b": 27
+      },
+      "artifact": {
+        "publisher": "RadixArk",
+        "model_id": "RadixArk/Qwen3.8-27B-NVFP4",
+        "revision": "554ebba9b5f1b79dc11246341960360e6ef05ef4",
+        "quantization": "ModelOpt NVFP4 mixed precision",
+        "license": "실행 기록에 미기재",
+        "commercial_use": "not_recorded"
+      },
+      "serving": {
+        "engine": "SGLang",
+        "version": "0.0.0.dev0+qwen38.27b.g561c8f3",
+        "image": "lmsysorg/sglang@sha256:3c0abdf41ef22de9d7a859dc16ed71eae69452e36c91f071a25e60c85a6d1fc6",
+        "image_digest": "sha256:3c0abdf41ef22de9d7a859dc16ed71eae69452e36c91f071a25e60c85a6d1fc6",
+        "profile": "engines/sglang/scripts/serve-qwen38-27b-nvfp4 mtp",
+        "options": {
+          "context_length": 32768,
+          "mem_fraction_static": 0.7,
+          "attention_backend": "flashinfer",
+          "chunked_prefill_size": 8192,
+          "kv_cache_dtype": "fp8_e4m3",
+          "mamba_ssm_dtype": "bfloat16",
+          "mamba_full_memory_ratio": 4.21,
+          "mamba_radix_cache_strategy": "extra_buffer_lazy",
+          "max_mamba_cache_size": 8,
+          "max_running_requests": 2
+        },
+        "speculative": {
+          "mode": "mtp",
+          "draft_model": null,
+          "num_tokens": 4,
+          "acceptance_pct": null
+        }
+      },
+      "validation": {
+        "api": "pass",
+        "chat": "pass",
+        "tool_simple": {
+          "passed": 6,
+          "attempts": 6
+        },
+        "tool_nested": {
+          "passed": 6,
+          "attempts": 6
+        },
+        "tool_large_surface": {
+          "passed": 6,
+          "attempts": 6
+        },
+        "answer_quality": "not_run"
+      },
+      "metrics": {
+        "ttft_p50_ms": 209.0,
+        "ttft_p95_ms": 211.0,
+        "tpot_p50_ms": 51.875,
+        "e2e_p50_s": 13.437,
+        "single_user_decode_tps_p50": 19.277,
+        "aggregate_output_tps": 37.152,
+        "concurrency": 2,
+        "request_throughput_rps": 0.145,
+        "accelerator_process_memory_mib": 76888.0,
+        "host_available_memory_gib": 29.717
+      },
+      "notes": [
+        "동일 조건 canonical 재측정에서 Tool Calling 18/18을 통과했습니다.",
+        "closed-loop 네 요청이 모두 256-token length 종료되어 총 1,024 tokens를 생성했습니다."
+      ],
+      "provenance": {
+        "measurement_scope": "DGX Spark localhost의 SGLang MTP canonical Quick rerun",
+        "result_sha256": "8e8e07b54f9eb9753003b72b05541b38f77ddcdef792220c6ecd04a2d1fb44a6",
+        "source_record_sha256": "5f1aeca2015ef3ba04ef809574073546a8148107357e15efd0da95197ea4fb68"
+      }
+    },
+    {
+      "id": "20260821-qwen38-nvfp4-sglang-dspark-rerun01",
+      "observed_on": "2026-08-21",
+      "comparison_group": "dgx-spark-quick-2026-08-21",
+      "status": "pass",
+      "promotion": "advance",
+      "eligible_for_ranking": false,
+      "model": {
+        "display_name": "Qwen3.8 27B NVFP4 · SGLang DSpark",
+        "family": "Qwen3.8",
+        "architecture": "dense",
+        "total_parameters_b": 27,
+        "active_parameters_b": 27
+      },
+      "artifact": {
+        "publisher": "RadixArk",
+        "model_id": "RadixArk/Qwen3.8-27B-NVFP4",
+        "revision": "554ebba9b5f1b79dc11246341960360e6ef05ef4",
+        "quantization": "ModelOpt NVFP4 mixed precision",
+        "license": "실행 기록에 미기재",
+        "commercial_use": "not_recorded"
+      },
+      "serving": {
+        "engine": "SGLang",
+        "version": "0.0.0.dev0+qwen38.27b.g561c8f3",
+        "image": "lmsysorg/sglang@sha256:3c0abdf41ef22de9d7a859dc16ed71eae69452e36c91f071a25e60c85a6d1fc6",
+        "image_digest": "sha256:3c0abdf41ef22de9d7a859dc16ed71eae69452e36c91f071a25e60c85a6d1fc6",
+        "profile": "engines/sglang/scripts/serve-qwen38-27b-nvfp4 dspark",
+        "options": {
+          "context_length": 32768,
+          "mem_fraction_static": 0.7,
+          "attention_backend": "flashinfer",
+          "chunked_prefill_size": 8192,
+          "kv_cache_dtype": "fp8_e4m3",
+          "mamba_ssm_dtype": "bfloat16",
+          "mamba_full_memory_ratio": 4.21,
+          "mamba_radix_cache_strategy": "extra_buffer_lazy",
+          "max_mamba_cache_size": 8,
+          "max_running_requests": 2
+        },
+        "speculative": {
+          "mode": "external-draft",
+          "draft_model": "RadixArk/Qwen3.8-27B-DSpark",
+          "num_tokens": 8,
+          "acceptance_pct": null
+        }
+      },
+      "validation": {
+        "api": "pass",
+        "chat": "pass",
+        "tool_simple": {
+          "passed": 6,
+          "attempts": 6
+        },
+        "tool_nested": {
+          "passed": 6,
+          "attempts": 6
+        },
+        "tool_large_surface": {
+          "passed": 6,
+          "attempts": 6
+        },
+        "answer_quality": "not_run"
+      },
+      "metrics": {
+        "ttft_p50_ms": 323.0,
+        "ttft_p95_ms": 336.0,
+        "tpot_p50_ms": 19.601,
+        "e2e_p50_s": 5.324,
+        "single_user_decode_tps_p50": 51.019,
+        "aggregate_output_tps": 88.575,
+        "concurrency": 2,
+        "request_throughput_rps": 0.384,
+        "accelerator_process_memory_mib": 78091.0,
+        "host_available_memory_gib": 27.866
+      },
+      "notes": [
+        "동일 조건 canonical 재측정에서 Tool Calling 18/18을 통과했습니다.",
+        "closed-loop는 총 922 tokens와 2 stop, 2 length 종료이므로 aggregate throughput 순위에서 제외했습니다.",
+        "세 SGLang 구성 중 재현된 single-user decode TPS가 가장 높아 다음 characterization 후보로 유지합니다."
+      ],
+      "provenance": {
+        "measurement_scope": "DGX Spark localhost의 SGLang DSpark canonical Quick rerun",
+        "result_sha256": "5ef218d87662d6f1dc80e3b4691c5d7d04c973dbd172eafe753534dba8460b04",
+        "source_record_sha256": "5f1aeca2015ef3ba04ef809574073546a8148107357e15efd0da95197ea4fb68"
+      }
+    },
+    {
+      "id": "20260821-qwen38-nvfp4-sglang-dflash2-rerun01",
+      "observed_on": "2026-08-21",
+      "comparison_group": "dgx-spark-quick-2026-08-21",
+      "status": "pass",
+      "promotion": "reference",
+      "eligible_for_ranking": false,
+      "model": {
+        "display_name": "Qwen3.8 27B NVFP4 · SGLang DFlash2",
+        "family": "Qwen3.8",
+        "architecture": "dense",
+        "total_parameters_b": 27,
+        "active_parameters_b": 27
+      },
+      "artifact": {
+        "publisher": "RadixArk",
+        "model_id": "RadixArk/Qwen3.8-27B-NVFP4",
+        "revision": "554ebba9b5f1b79dc11246341960360e6ef05ef4",
+        "quantization": "ModelOpt NVFP4 mixed precision",
+        "license": "실행 기록에 미기재",
+        "commercial_use": "not_recorded"
+      },
+      "serving": {
+        "engine": "SGLang",
+        "version": "SGLang c14312a66420b75ca9a11bf1817c4db1fa26b097 with DFlash2 c90d8c34cf795185ee8de736b7ded9bca3fe0de1",
+        "image": "lmsysorg/sglang:qwen38-27b-dflash2",
+        "image_digest": null,
+        "profile": "engines/sglang/scripts/serve-qwen38-27b-nvfp4 dflash2",
+        "options": {
+          "image_id": "sha256:9601ae3d9f50cbaf404dde3566226d925ab0b1ffc5cbade428768d2ebe7be524",
+          "context_length": 32768,
+          "mem_fraction_static": 0.7,
+          "attention_backend": "flashinfer",
+          "chunked_prefill_size": 8192,
+          "kv_cache_dtype": "fp8_e4m3",
+          "mamba_ssm_dtype": "bfloat16",
+          "mamba_full_memory_ratio": 4.21,
+          "mamba_radix_cache_strategy": "extra_buffer",
+          "max_mamba_cache_size": 10,
+          "max_running_requests": 2
+        },
+        "speculative": {
+          "mode": "external-draft",
+          "draft_model": "z-lab/Qwen3.8-27B-DFlash2",
+          "num_tokens": 8,
+          "acceptance_pct": null
+        }
+      },
+      "validation": {
+        "api": "pass",
+        "chat": "pass",
+        "tool_simple": {
+          "passed": 6,
+          "attempts": 6
+        },
+        "tool_nested": {
+          "passed": 6,
+          "attempts": 6
+        },
+        "tool_large_surface": {
+          "passed": 6,
+          "attempts": 6
+        },
+        "answer_quality": "not_run"
+      },
+      "metrics": {
+        "ttft_p50_ms": 325.0,
+        "ttft_p95_ms": 362.0,
+        "tpot_p50_ms": 20.451,
+        "e2e_p50_s": 5.252,
+        "single_user_decode_tps_p50": 48.897,
+        "aggregate_output_tps": 82.649,
+        "concurrency": 2,
+        "request_throughput_rps": 0.422,
+        "accelerator_process_memory_mib": 78279.0,
+        "host_available_memory_gib": 28.984
+      },
+      "notes": [
+        "동일 조건 canonical 재측정에서 Tool Calling 18/18을 통과했습니다.",
+        "closed-loop는 네 요청 모두 stop으로 총 784 tokens를 생성해 aggregate throughput 순위에서 제외했습니다.",
+        "초기 요약의 66.755 decode tok/s는 재현되지 않았고 cache 8 진단도 48.260 tok/s였습니다.",
+        "custom image provenance와 성능 재현성 문제를 해소하기 전까지 참고 구성으로 유지합니다."
+      ],
+      "provenance": {
+        "measurement_scope": "DGX Spark localhost의 SGLang DFlash2 canonical Quick rerun",
+        "result_sha256": "41953208b866fd09f2c2b9ecc981585e56db1b92f6ed8657337502cef078a147",
+        "source_record_sha256": "5f1aeca2015ef3ba04ef809574073546a8148107357e15efd0da95197ea4fb68"
+      }
+    },
+    {
+      "id": "20260825-gemma4-26b-a4b-nvfp4-vllm-baseline02",
+      "observed_on": "2026-08-25",
+      "comparison_group": "dgx-spark-gemma4-sequential-quick-2026-08",
+      "status": "pass",
+      "promotion": "advance",
+      "eligible_for_ranking": true,
+      "model": {
+        "display_name": "Gemma4 26B-A4B NVFP4 · vLLM",
+        "family": "Gemma4",
+        "architecture": "moe",
+        "total_parameters_b": 25.2,
+        "active_parameters_b": 3.8
+      },
+      "artifact": {
+        "publisher": "NVIDIA",
+        "model_id": "nvidia/Gemma-4-26B-A4B-NVFP4",
+        "revision": "a19cfe00be84568a6867111c9a68c9c44fdcffe6",
+        "quantization": "ModelOpt NVFP4; Marlin weight-only execution on GB10",
+        "license": "실행 기록에 미기재",
+        "commercial_use": "not_recorded"
+      },
+      "serving": {
+        "engine": "vLLM",
+        "version": "0.19.2rc1.dev134+gfe9c3d6c5.cu130",
+        "image": "vllm/vllm-openai:cu130-nightly",
+        "image_digest": "sha256:3dbe092ec5b2cef63b6104d33fa75d6ce53a7870962529ada69f78bbbc38e776",
+        "profile": "engines/vllm/docker-compose.single-node.yml#vllm-gemma4-26b-a4b-nvfp4-candidate",
+        "options": {
+          "tensor_parallel_size": 1,
+          "context_length": 32768,
+          "max_num_seqs": 2,
+          "max_num_batched_tokens": 8192,
+          "gpu_memory_utilization": 0.4,
+          "kv_cache_dtype": "auto",
+          "moe_backend": "marlin",
+          "prefix_caching": true,
+          "chunked_prefill": true,
+          "reasoning_parser": "gemma4",
+          "tool_call_parser": "gemma4",
+          "enforce_eager": true,
+          "served_model_names": [
+            "gemma-4-26b-a4b-nvfp4"
+          ]
+        },
+        "speculative": {
+          "mode": "off",
+          "draft_model": null,
+          "num_tokens": null,
+          "acceptance_pct": null
+        }
+      },
+      "validation": {
+        "api": "pass",
+        "chat": "pass",
+        "tool_simple": {
+          "passed": 3,
+          "attempts": 3
+        },
+        "tool_nested": {
+          "passed": 3,
+          "attempts": 3
+        },
+        "tool_large_surface": {
+          "passed": 3,
+          "attempts": 3
+        },
+        "answer_quality": "not_run"
+      },
+      "metrics": {
+        "ttft_p50_ms": 92.0,
+        "ttft_p95_ms": 122.0,
+        "tpot_p50_ms": 46.138,
+        "e2e_p50_s": 11.861,
+        "single_user_decode_tps_p50": 21.674,
+        "aggregate_output_tps": 34.033,
+        "concurrency": 2,
+        "request_throughput_rps": 0.133,
+        "accelerator_process_memory_mib": 48101.0,
+        "host_available_memory_gib": 59.542
+      },
+      "notes": [
+        "한국어 chat과 단순·중첩·32-tool 선택을 각각 3회 통과했습니다.",
+        "DGX Spark GB10에서는 native FP4 compute가 아니라 Marlin weight-only FP4 경로를 사용합니다.",
+        "MTP-off 비교 기준선이며 FP8 KV-cache scaling 경고를 고려해 답변 품질은 별도로 평가해야 합니다."
+      ],
+      "provenance": {
+        "measurement_scope": "DGX Spark local bridge endpoint의 vLLM NVFP4 MTP-off canonical Quick run",
+        "result_sha256": "3a2690fcedf53d4812ed34dca95a3ed5303f5d39263d0fb59425af2bea5f71b8",
+        "source_record_sha256": "a53281b9fd0d521f539e2fd4d15de7b056ba5e06f495455e6c83d8f09637ebbc"
+      }
+    },
+    {
+      "id": "20260825-gemma4-26b-a4b-nvfp4-vllm-seq4-quick01",
+      "observed_on": "2026-08-25",
+      "comparison_group": "dgx-spark-gemma4-sequential-quick-2026-08",
+      "status": "pass",
+      "promotion": "advance",
+      "eligible_for_ranking": true,
+      "model": {
+        "display_name": "Gemma4 26B-A4B NVFP4 · vLLM seq4",
+        "family": "Gemma4",
+        "architecture": "moe",
+        "total_parameters_b": 25.2,
+        "active_parameters_b": 3.8
+      },
+      "artifact": {
+        "publisher": "NVIDIA",
+        "model_id": "nvidia/Gemma-4-26B-A4B-NVFP4",
+        "revision": "a19cfe00be84568a6867111c9a68c9c44fdcffe6",
+        "quantization": "ModelOpt NVFP4; Marlin weight-only execution on GB10",
+        "license": "실행 기록에 미기재",
+        "commercial_use": "not_recorded"
+      },
+      "serving": {
+        "engine": "vLLM",
+        "version": "0.19.2rc1.dev134+gfe9c3d6c5.cu130",
+        "image": "vllm/vllm-openai:cu130-nightly",
+        "image_digest": "sha256:3dbe092ec5b2cef63b6104d33fa75d6ce53a7870962529ada69f78bbbc38e776",
+        "profile": "engines/vllm/docker-compose.single-node.yml#vllm-gemma4-26b-a4b-nvfp4-candidate",
+        "options": {
+          "tensor_parallel_size": 1,
+          "context_length": 32768,
+          "max_num_seqs": 4,
+          "max_num_batched_tokens": 8192,
+          "gpu_memory_utilization": 0.4,
+          "kv_cache_dtype": "auto",
+          "moe_backend": "marlin",
+          "prefix_caching": true,
+          "chunked_prefill": true,
+          "reasoning_parser": "gemma4",
+          "tool_call_parser": "gemma4",
+          "enforce_eager": true,
+          "served_model_names": [
+            "gemma-4-26b-a4b-nvfp4"
+          ]
+        },
+        "speculative": {
+          "mode": "off",
+          "draft_model": null,
+          "num_tokens": null,
+          "acceptance_pct": null
+        }
+      },
+      "validation": {
+        "api": "pass",
+        "chat": "pass",
+        "tool_simple": {
+          "passed": 3,
+          "attempts": 3
+        },
+        "tool_nested": {
+          "passed": 3,
+          "attempts": 3
+        },
+        "tool_large_surface": {
+          "passed": 3,
+          "attempts": 3
+        },
+        "answer_quality": "not_run"
+      },
+      "metrics": {
+        "ttft_p50_ms": 86.0,
+        "ttft_p95_ms": 101.0,
+        "tpot_p50_ms": 46.073,
+        "e2e_p50_s": 11.839,
+        "single_user_decode_tps_p50": 21.704,
+        "aggregate_output_tps": 40.948,
+        "concurrency": 2,
+        "request_throughput_rps": 0.16,
+        "accelerator_process_memory_mib": 48131.0,
+        "host_available_memory_gib": 58.558
+      },
+      "notes": [
+        "max_num_seqs만 2에서 4로 변경한 A/B 후보이며 한국어 chat과 단순·중첩·32-tool 선택을 각각 3회 통과했습니다.",
+        "동일 Quick workload의 C2 aggregate output TPS가 34.033에서 40.948로 증가했고 accelerator process memory는 30 MiB 증가했습니다.",
+        "C4·C8 결과는 1회 characterization preview이므로 표준 용량 측정이나 품질 평가를 대신하지 않습니다."
+      ],
+      "provenance": {
+        "measurement_scope": "DGX Spark local bridge endpoint의 vLLM NVFP4 MTP-off max_num_seqs=4 canonical Quick run",
+        "result_sha256": "c0c5464693778c18a048838185f57be8d414390f9de383c93492644212dfba07",
+        "source_record_sha256": "f8895edd68379f6f448814bf3c80f3e31c5ddaa7a98776f3f3aec650adc13675"
+      }
+    },
+    {
+      "id": "20260825-gemma4-26b-a4b-nvfp4-vllm-seq4-compiled-quick01",
+      "observed_on": "2026-08-25",
+      "comparison_group": "dgx-spark-gemma4-sequential-quick-2026-08",
+      "status": "pass",
+      "promotion": "advance",
+      "eligible_for_ranking": true,
+      "model": {
+        "display_name": "Gemma4 26B-A4B NVFP4 · vLLM compiled",
+        "family": "Gemma4",
+        "architecture": "moe",
+        "total_parameters_b": 25.2,
+        "active_parameters_b": 3.8
+      },
+      "artifact": {
+        "publisher": "NVIDIA",
+        "model_id": "nvidia/Gemma-4-26B-A4B-NVFP4",
+        "revision": "a19cfe00be84568a6867111c9a68c9c44fdcffe6",
+        "quantization": "ModelOpt NVFP4; Marlin weight-only execution on GB10",
+        "license": "실행 기록에 미기재",
+        "commercial_use": "not_recorded"
+      },
+      "serving": {
+        "engine": "vLLM",
+        "version": "0.19.2rc1.dev134+gfe9c3d6c5.cu130",
+        "image": "vllm/vllm-openai:cu130-nightly",
+        "image_digest": "sha256:3dbe092ec5b2cef63b6104d33fa75d6ce53a7870962529ada69f78bbbc38e776",
+        "profile": "engines/vllm/docker-compose.single-node.yml#vllm-gemma4-26b-a4b-nvfp4-candidate",
+        "options": {
+          "tensor_parallel_size": 1,
+          "context_length": 32768,
+          "max_num_seqs": 4,
+          "max_num_batched_tokens": 8192,
+          "gpu_memory_utilization": 0.4,
+          "kv_cache_dtype": "auto",
+          "moe_backend": "marlin",
+          "prefix_caching": true,
+          "chunked_prefill": true,
+          "reasoning_parser": "gemma4",
+          "tool_call_parser": "gemma4",
+          "enforce_eager": false,
+          "compile_mode": "VLLM_COMPILE",
+          "cudagraph_mode": "FULL_AND_PIECEWISE",
+          "cudagraph_capture_sizes": [
+            1,
+            2,
+            4,
+            8
+          ],
+          "served_model_names": [
+            "gemma-4-26b-a4b-nvfp4"
+          ]
+        },
+        "speculative": {
+          "mode": "off",
+          "draft_model": null,
+          "num_tokens": null,
+          "acceptance_pct": null
+        }
+      },
+      "validation": {
+        "api": "pass",
+        "chat": "pass",
+        "tool_simple": {
+          "passed": 3,
+          "attempts": 3
+        },
+        "tool_nested": {
+          "passed": 3,
+          "attempts": 3
+        },
+        "tool_large_surface": {
+          "passed": 3,
+          "attempts": 3
+        },
+        "answer_quality": "not_run"
+      },
+      "metrics": {
+        "ttft_p50_ms": 80.0,
+        "ttft_p95_ms": 106.0,
+        "tpot_p50_ms": 40.856,
+        "e2e_p50_s": 10.499,
+        "single_user_decode_tps_p50": 24.476,
+        "aggregate_output_tps": 42.189,
+        "concurrency": 2,
+        "request_throughput_rps": 0.165,
+        "accelerator_process_memory_mib": 48381.0,
+        "host_available_memory_gib": 58.185
+      },
+      "notes": [
+        "eager seq4 기준에서 --enforce-eager만 제거해 vLLM compile과 CUDA Graphs를 활성화한 A/B 후보입니다.",
+        "두 Quick 실행에서 single-user decode p50이 24.476과 24.472 tok/s로 재현되어 eager 대비 12.8% 증가했습니다.",
+        "한국어 chat과 단순·중첩·32-tool 선택을 각각 3회 통과했습니다.",
+        "compiled 구성의 답변 품질은 별도로 평가해야 합니다."
+      ],
+      "provenance": {
+        "measurement_scope": "DGX Spark local bridge endpoint의 vLLM NVFP4 MTP-off seq4 compile/CUDA Graph canonical Quick run",
+        "result_sha256": "8394cd2595ce2c7e0729729c282d453da7b942ceb744b4ccdd97d99c13dc271f",
+        "source_record_sha256": "b4d80d914b3c2a502f390d13a3e643d98c5148a433bda26c2518e69d5e8a45d1"
+      }
+    }
+  ]
+}

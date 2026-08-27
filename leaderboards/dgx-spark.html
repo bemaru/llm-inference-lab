@@ -1,0 +1,664 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>DGX Spark 모델 서빙 벤치마크</title>
+  <style>
+    :root {
+      --paper: #f3f5f7;
+      --panel: #ffffff;
+      --panel-strong: #ffffff;
+      --ink: #202830;
+      --muted: #66717d;
+      --rule: #d9dfe5;
+      --rule-strong: #aeb8c2;
+      --cobalt: #315f8c;
+      --teal: #2d6a57;
+      --orange: #9a5b2e;
+      --violet: #655b86;
+      --steel: #737e88;
+      --navy: #243b55;
+      --shadow: 0 8px 24px rgba(32, 48, 64, .055);
+      --display: "Aptos Display", "Segoe UI", "Noto Sans KR", sans-serif;
+      --body: "Aptos", "Segoe UI", "Noto Sans KR", sans-serif;
+      --data: "Cascadia Mono", "SFMono-Regular", Consolas, monospace;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--paper);
+      font-family: var(--body);
+      line-height: 1.55;
+    }
+
+    a { color: var(--cobalt); }
+    button, input, select { font: inherit; }
+    button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible,
+    [tabindex="0"]:focus-visible {
+      outline: 3px solid rgba(49, 95, 140, .32);
+      outline-offset: 2px;
+    }
+
+    .shell { max-width: 1480px; margin: 0 auto; padding: 24px 28px 64px; }
+    .method-strip {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px 16px;
+      padding: 11px 16px;
+      border: 1px solid var(--rule);
+      border-top: 3px solid var(--navy);
+      background: var(--panel);
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .method-strip .method-mark { color: var(--ink); font-weight: 650; }
+    .method-strip .method-separator { color: var(--rule-strong); }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(360px, .55fr);
+      gap: 42px;
+      align-items: center;
+      margin-top: 14px;
+      padding: 34px 36px;
+      border: 1px solid var(--rule);
+      background: var(--panel);
+    }
+    .eyebrow {
+      margin: 0 0 8px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 600;
+    }
+    h1 {
+      max-width: 900px;
+      margin: 0;
+      font: 650 clamp(34px, 4vw, 52px)/1.18 var(--display);
+      letter-spacing: -.025em;
+      word-break: keep-all;
+    }
+    .hero-copy {
+      max-width: 780px;
+      margin: 16px 0 0;
+      color: var(--muted);
+      font-size: 16px;
+      word-break: keep-all;
+    }
+    .hero-meta {
+      border-left: 1px solid var(--rule);
+      padding: 0 0 0 28px;
+    }
+    .hero-meta dl { margin: 0; }
+    .hero-meta div {
+      display: grid;
+      grid-template-columns: 92px 1fr;
+      gap: 12px;
+      padding: 9px 0;
+      border-bottom: 1px solid var(--rule);
+    }
+    .hero-meta dt {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .hero-meta dd { margin: 0; font-weight: 650; }
+
+    .warning {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 14px;
+      align-items: start;
+      margin: 18px 0 30px;
+      padding: 15px 18px;
+      border: 1px solid #cdd7e0;
+      border-left: 4px solid var(--cobalt);
+      background: #f7f9fb;
+    }
+    .warning strong {
+      color: var(--navy);
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .warning p { margin: 0; color: #4f5b66; }
+
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      align-items: end;
+      margin: 38px 0 14px;
+    }
+    .section-head h2 {
+      margin: 0;
+      font: 650 clamp(24px, 2.5vw, 32px)/1.2 var(--display);
+      letter-spacing: -.015em;
+    }
+    .section-head p { max-width: 660px; margin: 0; color: var(--muted); }
+
+    .plot-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.45fr) minmax(340px, .55fr);
+      border: 1px solid var(--rule);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+    .plot-panel { min-width: 0; padding: 24px; border-right: 1px solid var(--rule); }
+    .plot-caption {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 8px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    #tradeoffPlot { display: block; width: 100%; min-height: 390px; }
+    .plot-empty { fill: var(--muted); font: 14px var(--body); }
+    .axis-label { fill: var(--muted); font: 11px var(--data); }
+    .point-label { fill: var(--ink); font: 650 11px var(--body); pointer-events: none; }
+    .plot-point { cursor: pointer; transition: transform .18s ease, opacity .18s ease; transform-box: fill-box; transform-origin: center; }
+    .plot-point:hover, .plot-point.is-selected { transform: scale(1.18); }
+    .plot-point.is-dimmed { opacity: .24; }
+
+    .detail-panel { padding: 26px; background: #fbfcfd; }
+    .detail-panel h3 {
+      margin: 0 0 6px;
+      font: 650 25px/1.15 var(--display);
+      letter-spacing: -.02em;
+    }
+    .detail-kicker { margin: 0 0 20px; color: var(--muted); font: 12px var(--data); }
+    .badge-row { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 18px; }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      min-height: 25px;
+      padding: 4px 7px;
+      border: 1px solid currentColor;
+      border-radius: 3px;
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .badge.advance, .badge.pass { color: var(--teal); background: rgba(45, 106, 87, .07); }
+    .badge.control { color: var(--cobalt); background: rgba(49, 95, 140, .07); }
+    .badge.reference { color: var(--violet); background: rgba(101, 91, 134, .07); }
+    .badge.reject, .badge.partial { color: var(--orange); background: rgba(154, 91, 46, .07); }
+    .badge.blocked, .badge.historical { color: var(--steel); background: rgba(110, 125, 141, .08); }
+    .detail-list { margin: 0; }
+    .detail-list > div { padding: 10px 0; border-top: 1px solid var(--rule); }
+    .detail-list dt { margin-bottom: 4px; color: var(--muted); font-size: 11px; font-weight: 650; }
+    .detail-list dd { margin: 0; overflow-wrap: anywhere; }
+    .mono { font-family: var(--data); font-size: .88em; }
+    .options {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .option {
+      padding: 4px 6px;
+      background: var(--paper);
+      border: 1px solid var(--rule);
+      font: 11px var(--data);
+    }
+    .detail-notes { margin: 12px 0 0; padding-left: 18px; color: var(--muted); }
+    .detail-notes li + li { margin-top: 6px; }
+
+    .toolbar {
+      display: grid;
+      grid-template-columns: minmax(220px, 1.2fr) repeat(3, minmax(150px, .55fr));
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .control { display: grid; gap: 5px; }
+    .control label { color: var(--muted); font-size: 11px; font-weight: 650; }
+    .control input, .control select {
+      width: 100%;
+      min-height: 42px;
+      border: 1px solid var(--rule-strong);
+      border-radius: 3px;
+      color: var(--ink);
+      background: var(--panel-strong);
+      padding: 8px 10px;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--rule);
+      background: var(--panel-strong);
+      box-shadow: var(--shadow);
+    }
+    table { width: 100%; min-width: 1160px; border-collapse: collapse; }
+    th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      padding: 12px 10px;
+      border-bottom: 1px solid var(--rule-strong);
+      color: var(--muted);
+      background: #eef1f4;
+      text-align: right;
+      font-size: 11px;
+      font-weight: 650;
+      white-space: nowrap;
+    }
+    th:nth-child(-n+4), th:last-child { text-align: left; }
+    td { padding: 14px 10px; border-bottom: 1px solid var(--rule); text-align: right; vertical-align: middle; }
+    td:nth-child(-n+4), td:last-child { text-align: left; }
+    tbody tr { cursor: pointer; transition: background .15s ease; }
+    tbody tr:hover, tbody tr.is-selected { background: #f1f5f8; }
+    tbody tr:last-child td { border-bottom: 0; }
+    .rank { font: 700 16px var(--data); color: var(--cobalt); }
+    .config-name { display: block; font-weight: 720; }
+    .config-meta { display: block; margin-top: 4px; color: var(--muted); font: 11px/1.45 var(--data); }
+    .metric { font: 650 13px var(--data); white-space: nowrap; }
+    .metric.best { color: var(--teal); font-weight: 800; }
+    .source-link { font: 12px var(--data); white-space: nowrap; }
+    .empty-row { padding: 32px; color: var(--muted); text-align: center !important; }
+    .table-note { margin: 12px 2px 0; color: var(--muted); font-size: 13px; }
+
+    .method-card {
+      margin-top: 28px;
+      padding: 20px 22px;
+      border: 1px solid var(--rule);
+      border-left: 4px solid var(--cobalt);
+      background: var(--panel);
+    }
+    .method-card h2 { margin: 0 0 10px; font: 700 22px var(--display); }
+    .method-card ul { margin: 0; padding-left: 20px; color: var(--muted); }
+    .method-card li + li { margin-top: 5px; }
+    footer { margin-top: 34px; padding-top: 16px; border-top: 1px solid var(--rule-strong); color: var(--muted); font: 11px var(--data); }
+
+    @media (max-width: 1050px) {
+      .hero, .plot-grid { grid-template-columns: 1fr; }
+      .plot-panel { border-right: 0; border-bottom: 1px solid var(--rule); }
+      .toolbar { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 650px) {
+      .shell { padding: 12px 10px 44px; }
+      .hero { padding: 24px 20px; }
+      h1 { font-size: clamp(30px, 9vw, 40px); }
+      .hero-meta { border-left: 0; border-top: 1px solid var(--rule); padding: 18px 0 0; }
+      .warning { grid-template-columns: 1fr; gap: 6px; }
+      .toolbar { grid-template-columns: 1fr; }
+      .section-head { display: block; }
+      .section-head p { margin-top: 10px; }
+      .plot-panel, .detail-panel { padding: 16px; }
+      #tradeoffPlot { min-height: 310px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after { transition-duration: .001ms !important; animation-duration: .001ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <div class="method-strip" aria-label="측정 분류">
+      <span class="method-mark">측정 구분: Quick benchmark</span>
+      <span class="method-separator">•</span>
+      <span>Custom workload</span>
+      <span class="method-separator">•</span>
+      <span>검증 상태: Unverified</span>
+      <span class="method-separator">•</span>
+      <span id="observedThrough">기준일 —</span>
+    </div>
+
+    <header class="hero">
+      <div>
+        <h1>DGX Spark 모델 서빙 벤치마크</h1>
+        <p class="hero-copy">동일 하드웨어에서 측정한 모델 체크포인트, 양자화, 런타임 및 서빙 옵션별 Quick benchmark 결과를 비교합니다. 각 결과는 검증 상태와 정규화 결과의 근거 해시을 함께 제공합니다.</p>
+      </div>
+      <aside class="hero-meta" aria-label="플랫폼 요약">
+        <dl>
+          <div><dt>측정 시스템</dt><dd id="platformName">—</dd></div>
+          <div><dt>등록 구성</dt><dd id="recordCount">—</dd></div>
+          <div><dt>순위 대상</dt><dd id="rankedCount">—</dd></div>
+          <div><dt>Quick 1위</dt><dd id="leaderName">—</dd></div>
+        </dl>
+      </aside>
+    </header>
+
+    <div class="warning" role="note">
+      <strong>결과 해석 시 유의사항</strong>
+      <p>현재 순위는 단일 Quick benchmark의 방향성 결과입니다. 반복 토큰 출력은 speculative decoding에 유리하며, 답변 품질·application workflow·open-loop goodput은 아직 측정하지 않았습니다. 이 결과는 배포 결정 또는 공식 MLPerf 결과로 사용할 수 없습니다.</p>
+    </div>
+
+    <section aria-labelledby="tradeoffHeading">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">운용 지표 비교</p>
+          <h2 id="tradeoffHeading">TTFT 및 처리량 비교</h2>
+        </div>
+        <p>가로축은 TTFT p50, 세로축은 concurrency 2에서 측정한 aggregate output throughput입니다. 점 크기는 측정 후 accelerator process memory를 나타냅니다.</p>
+      </div>
+      <div class="plot-grid">
+        <div class="plot-panel">
+          <div class="plot-caption"><span id="plotGroupLabel">—</span><span>데이터 점을 선택하면 상세 조건을 확인할 수 있습니다.</span></div>
+          <svg id="tradeoffPlot" viewBox="0 0 860 410" role="img" aria-label="TTFT와 aggregate output TPS 산점도"></svg>
+        </div>
+        <aside class="detail-panel" id="detailPanel" aria-live="polite"></aside>
+      </div>
+    </section>
+
+    <section aria-labelledby="leaderboardHeading">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">측정 결과</p>
+          <h2 id="leaderboardHeading">서빙 구성별 비교</h2>
+        </div>
+        <p>순위는 현재 Quick 비교 그룹에서 API 및 Tool 검증 조건을 충족한 구성만 aggregate output throughput 기준으로 산정합니다.</p>
+      </div>
+
+      <div class="toolbar" aria-label="리더보드 필터">
+        <div class="control">
+          <label for="searchInput">검색</label>
+          <input id="searchInput" type="search" placeholder="모델, 체크포인트, 양자화, 파서 검색">
+        </div>
+        <div class="control">
+          <label for="groupFilter">비교 그룹</label>
+          <select id="groupFilter"></select>
+        </div>
+        <div class="control">
+          <label for="stageFilter">검토 상태</label>
+          <select id="stageFilter">
+            <option value="all">전체</option>
+            <option value="advance">후속 검증 대상</option>
+            <option value="control">비교 기준</option>
+            <option value="reference">참고 모델</option>
+            <option value="reject">후보 제외</option>
+            <option value="blocked">호환성 문제</option>
+            <option value="historical">과거 측정</option>
+          </select>
+        </div>
+        <div class="control">
+          <label for="sortBy">표시 순서</label>
+          <select id="sortBy">
+            <option value="rank">순위 / aggregate TPS</option>
+            <option value="single">Single-user TPS 높은 순</option>
+            <option value="ttft">TTFT 낮은 순</option>
+            <option value="memory">메모리 사용량 낮은 순</option>
+            <option value="model">모델 이름</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>순위</th>
+              <th>서빙 구성</th>
+              <th>검토 상태</th>
+              <th>Tool 검증</th>
+              <th>Single-user<br>tok/s</th>
+              <th>Aggregate C2<br>tok/s</th>
+              <th>TTFT<br>p50</th>
+              <th>E2E<br>p50</th>
+              <th>가속기<br>메모리</th>
+              <th>근거</th>
+            </tr>
+          </thead>
+          <tbody id="leaderboardBody"></tbody>
+        </table>
+      </div>
+      <p class="table-note" id="tableCount">—</p>
+    </section>
+
+    <section class="method-card" aria-labelledby="methodHeading">
+      <h2 id="methodHeading">비교 조건 및 한계</h2>
+      <ul id="methodLimitations"></ul>
+    </section>
+
+    <footer><span class="mono">benchmarks/results/dgx-spark.json</span>의 정규화된 결과를 기반으로 생성했습니다. 측정 조건과 한계는 각 결과에 기록하며, 근거 해시는 원본 실행 기록의 공개를 의미하지 않습니다.</footer>
+  </main>
+
+  <script id="leaderboard-data" type="application/json">{"$schema":"run-set.schema.json","schema_version":"1.0","observed_through":"2026-08-25","platform":{"id":"nvidia-dgx-spark-gb10-128gb","display_name":"NVIDIA DGX Spark","accelerator":"GB10","accelerator_count":1,"memory_gib":128},"comparison_groups":{"dgx-spark-quick-2026-08-21":{"label":"OpenAI-compatible Quick benchmark · 2026-08-21","classification":"quick","comparison_level":"directional","workload":"DGX Spark localhost에서 256-token synthetic repeated-token output, streaming sample 3회, concurrency 2 closed-loop request 4건 및 deterministic Tool schema를 사용","limitations":["단일 Quick run 결과이며 신뢰구간과 지속 부하 구간을 포함하지 않습니다.","반복 토큰 출력은 speculative decoding에 유리한 workload입니다.","Qwen3.6은 vLLM 0.24.0, 신규 후보는 vLLM 0.27.1을 사용했으므로 런타임이 통제된 비교가 아닙니다.","SGLang DSpark와 DFlash2의 closed-loop 요청은 생성 token 수와 finish reason이 달라 aggregate throughput 순위에서 제외했습니다.","DFlash2 custom image의 초기 66.755 decode tok/s는 canonical 재측정에서 재현되지 않았습니다.","답변 품질, 한국어 답변 품질, open-loop goodput 및 application workflow는 측정하지 않았습니다."]},"dgx-spark-gemma4-sequential-quick-2026-08":{"label":"Gemma4 sequential-output Quick benchmark · 2026-08","classification":"quick","comparison_level":"directional","workload":"DGX Spark localhost에서 sequential-integer 256-token output, streaming sample 3회, concurrency 2 closed-loop request 4건 및 deterministic Tool schema를 사용","limitations":["기존 vLLM 후보의 repeated-word workload와 출력 프롬프트가 달라 직접 비교할 수 없습니다.","단일 Quick run 결과이며 신뢰구간과 지속 부하 구간을 포함하지 않습니다.","Ollama와 vLLM은 런타임, 양자화 형식 및 요청 호환 옵션이 달라 결과는 serving stack의 방향성 비교입니다.","Ollama는 chat_template_kwargs를 전송하지 않았고 vLLM은 enable_thinking=false를 전송했습니다.","답변 품질, 한국어 답변 품질, open-loop goodput 및 application workflow는 측정하지 않았습니다."]},"dgx-spark-historical-smoke-2026-05-01":{"label":"Gemma4 BF16 API smoke (과거 측정) · 2026-05-01","classification":"smoke","comparison_level":"not_comparable","workload":"장시간 실행 중인 Gemma4 BF16 서비스에 non-streaming 160-token chat request 1건을 요청","limitations":["현재 Quick benchmark와 workload, context length, concurrency 및 co-located memory 조건이 다릅니다.","기록된 generation throughput은 server log snapshot이며 현재 Quick benchmark의 client metric과 직접 비교할 수 없습니다."]}},"runs":[{"id":"20260821-nemotron35-nvfp4-dspark-n3","observed_on":"2026-08-21","comparison_group":"dgx-spark-quick-2026-08-21","status":"pass","promotion":"advance","eligible_for_ranking":true,"model":{"display_name":"Nemotron 3.5 Lightning 30B-A3B","family":"Nemotron 3.5","architecture":"hybrid-moe","total_parameters_b":30,"active_parameters_b":3},"artifact":{"publisher":"NVIDIA","model_id":"nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4","revision":"e8f3c7c4de75ad84fe1bcef95d38eca76214480b","quantization":"ModelOpt NVFP4 target + NVFP4 DSpark draft","license":"OpenMDW License Agreement 1.1","commercial_use":"allowed"},"serving":{"engine":"vLLM","version":"0.27.1","image":"vllm/vllm-openai:v0.27.1-ubuntu2404","image_digest":"sha256:6a278041c910af1a6db0f3555aac30dbdf93d7acb01008656d99007cf7781a3a","profile":"nemotron35-nvfp4-candidate","options":{"tensor_parallel_size":1,"max_model_len":32768,"max_num_seqs":2,"max_num_batched_tokens":8192,"gpu_memory_utilization":0.4,"kv_cache_dtype":"fp8","moe_backend":"marlin","mamba_backend":"flashinfer/align","prefix_caching":true,"chunked_prefill":true,"tool_call_parser":"qwen3_coder","reasoning_parser":"nemotron_v3"},"speculative":{"mode":"external-draft","draft_model":"nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4-DSpark@d10c6ff40d6e69d1f92e407e027de3eafdb77645","num_tokens":3,"acceptance_pct":99.43}},"validation":{"api":"pass","chat":"pass","tool_simple":{"passed":6,"attempts":6},"tool_nested":{"passed":6,"attempts":6},"tool_large_surface":{"passed":6,"attempts":6},"answer_quality":"not_run"},"metrics":{"ttft_p50_ms":147,"ttft_p95_ms":213,"tpot_p50_ms":7.253,"e2e_p50_s":2.001,"single_user_decode_tps_p50":137.874,"aggregate_output_tps":221.477,"concurrency":2,"request_throughput_rps":0.865,"accelerator_process_memory_mib":47781,"host_available_memory_gib":58},"notes":["측정 가능한 후보 중 Quick benchmark 성능이 가장 높았습니다.","모델 카드의 지원 언어 목록에 한국어가 포함되지 않아 한국어 답변 품질 검증이 필요합니다.","Synthetic output에서 draft acceptance가 비정상적으로 높게 관측되었습니다."],"provenance":{"measurement_scope":"DGX Spark localhost에서 OpenAI-compatible quick_check.py로 측정","source_record_sha256":"ea5bb20cb7aa000e0eaa7e47465b807d3ed271ff0a6d6f0bbb06547c651f089a"}},{"id":"20260821-qwen36-nvfp4-mtp-n3","observed_on":"2026-08-21","comparison_group":"dgx-spark-quick-2026-08-21","status":"pass","promotion":"control","eligible_for_ranking":true,"model":{"display_name":"Qwen3.6 35B-A3B","family":"Qwen3.6","architecture":"moe","total_parameters_b":35,"active_parameters_b":3},"artifact":{"publisher":"NVIDIA","model_id":"nvidia/Qwen3.6-35B-A3B-NVFP4","revision":"491c2f1ea524c639598bf8fa787a93fed5a6fbce","quantization":"ModelOpt NVFP4, Marlin weight-only FP4 path","license":"실행 기록에 미기재","commercial_use":"not_recorded"},"serving":{"engine":"vLLM","version":"0.24.0","image":"vllm/vllm-openai:v0.24.0-ubuntu2404","image_digest":"sha256:bfdefe75b5c3fb83f4f0fcaae8f39fac87941cbadb05cd2203f44a1689236c71","profile":"qwen36-nvfp4-mtp","options":{"tensor_parallel_size":1,"max_model_len":32768,"max_num_seqs":2,"max_num_batched_tokens":8192,"gpu_memory_utilization":0.4,"kv_cache_dtype":"fp8","attention_backend":"flashinfer","moe_backend":"marlin","prefix_caching":true,"chunked_prefill":true,"async_scheduling":true,"tool_call_parser":"qwen3_xml","reasoning_parser":"qwen3","thinking":false},"speculative":{"mode":"mtp","draft_model":null,"num_tokens":3,"acceptance_pct":99.48}},"validation":{"api":"pass","chat":"pass","tool_simple":{"passed":6,"attempts":6},"tool_nested":{"passed":6,"attempts":6},"tool_large_surface":{"passed":6,"attempts":6},"answer_quality":"not_run"},"metrics":{"ttft_p50_ms":182,"ttft_p95_ms":null,"tpot_p50_ms":10.119,"e2e_p50_s":2.761,"single_user_decode_tps_p50":98.828,"aggregate_output_tps":98.453,"concurrency":2,"request_throughput_rps":0.385,"accelerator_process_memory_mib":71038,"host_available_memory_gib":36},"notes":["후속 benchmark의 비교 기준입니다.","MTP는 synthetic decode 성능을 높였지만 accelerator memory allocation을 약 23 GiB 증가시켰습니다.","Synthetic output에서 draft acceptance가 비정상적으로 높게 관측되었습니다."],"provenance":{"measurement_scope":"DGX Spark localhost에서 OpenAI-compatible quick_check.py로 측정","source_record_sha256":"924a3038cea5116e9ac97ab3898f3ef74f9d14a7bfb1412298e3f0e311268170"}},{"id":"20260821-qwen36-nvfp4-mtp-off","observed_on":"2026-08-21","comparison_group":"dgx-spark-quick-2026-08-21","status":"pass","promotion":"control","eligible_for_ranking":true,"model":{"display_name":"Qwen3.6 35B-A3B","family":"Qwen3.6","architecture":"moe","total_parameters_b":35,"active_parameters_b":3},"artifact":{"publisher":"NVIDIA","model_id":"nvidia/Qwen3.6-35B-A3B-NVFP4","revision":"491c2f1ea524c639598bf8fa787a93fed5a6fbce","quantization":"ModelOpt NVFP4, Marlin weight-only FP4 path","license":"실행 기록에 미기재","commercial_use":"not_recorded"},"serving":{"engine":"vLLM","version":"0.24.0","image":"vllm/vllm-openai:v0.24.0-ubuntu2404","image_digest":"sha256:bfdefe75b5c3fb83f4f0fcaae8f39fac87941cbadb05cd2203f44a1689236c71","profile":"qwen36-nvfp4","options":{"tensor_parallel_size":1,"max_model_len":32768,"max_num_seqs":2,"max_num_batched_tokens":8192,"gpu_memory_utilization":0.4,"kv_cache_dtype":"fp8","attention_backend":"flashinfer","moe_backend":"marlin","prefix_caching":true,"chunked_prefill":true,"async_scheduling":true,"tool_call_parser":"qwen3_xml","reasoning_parser":"qwen3","thinking":false},"speculative":{"mode":"off","draft_model":null,"num_tokens":null,"acceptance_pct":null}},"validation":{"api":"pass","chat":"pass","tool_simple":{"passed":6,"attempts":6},"tool_nested":{"passed":6,"attempts":6},"tool_large_surface":{"passed":6,"attempts":6},"answer_quality":"not_run"},"metrics":{"ttft_p50_ms":131,"ttft_p95_ms":187,"tpot_p50_ms":21.846,"e2e_p50_s":5.724,"single_user_decode_tps_p50":45.774,"aggregate_output_tps":70.992,"concurrency":2,"request_throughput_rps":0.277,"accelerator_process_memory_mib":47992,"host_available_memory_gib":56},"notes":["Qwen3.6 MTP 효과를 비교하기 위한 control 구성입니다.","MTP 구성보다 host memory 여유가 컸습니다."],"provenance":{"measurement_scope":"DGX Spark localhost에서 OpenAI-compatible quick_check.py로 측정","source_record_sha256":"99c55f2b2090206055c61f47411ec86756156f14e8d2064d7ace8e2099f825f2"}},{"id":"20260821-qwen38-fp8-mtp-n3","observed_on":"2026-08-21","comparison_group":"dgx-spark-quick-2026-08-21","status":"pass","promotion":"reference","eligible_for_ranking":true,"model":{"display_name":"Qwen3.8 27B","family":"Qwen3.8","architecture":"dense","total_parameters_b":27,"active_parameters_b":27},"artifact":{"publisher":"Qwen","model_id":"Qwen/Qwen3.8-27B-FP8","revision":"017b9c7af6b5689d5dd426a76e0bc077eb5ca20a","quantization":"Block FP8, 128-element block size","license":"실행 기록에 미기재","commercial_use":"not_recorded"},"serving":{"engine":"vLLM","version":"0.27.1","image":"vllm/vllm-openai:v0.27.1-ubuntu2404","image_digest":"sha256:6a278041c910af1a6db0f3555aac30dbdf93d7acb01008656d99007cf7781a3a","profile":"qwen38-fp8-candidate","options":{"tensor_parallel_size":1,"max_model_len":32768,"max_num_seqs":2,"max_num_batched_tokens":8192,"gpu_memory_utilization":0.4,"kv_cache_dtype":"fp8","prefix_caching":true,"chunked_prefill":true,"async_scheduling":true,"tool_call_parser":"qwen3_coder","reasoning_parser":"qwen3","thinking":false},"speculative":{"mode":"mtp","draft_model":null,"num_tokens":3,"acceptance_pct":92.07}},"validation":{"api":"pass","chat":"pass","tool_simple":{"passed":6,"attempts":6},"tool_nested":{"passed":6,"attempts":6},"tool_large_surface":{"passed":6,"attempts":6},"answer_quality":"not_run"},"metrics":{"ttft_p50_ms":472,"ttft_p95_ms":511,"tpot_p50_ms":63.612,"e2e_p50_s":16.703,"single_user_decode_tps_p50":15.72,"aggregate_output_tps":27.589,"concurrency":2,"request_throughput_rps":0.108,"accelerator_process_memory_mib":46936,"host_available_memory_gib":60},"notes":["Dense 모델의 품질 비교 기준으로 유지하며 interactive TPS 후보로는 선정하지 않았습니다.","측정 런타임에서 FP8 KV-cache scaling calibration이 적용되지 않았습니다."],"provenance":{"measurement_scope":"DGX Spark localhost에서 OpenAI-compatible quick_check.py로 측정","source_record_sha256":"59d679283bec790c4aa7fa35e00e87c5b88d7ae69a8f5a71377d78172a94be3a"}},{"id":"20260821-exaone45-awq-mtp-off","observed_on":"2026-08-21","comparison_group":"dgx-spark-quick-2026-08-21","status":"partial","promotion":"reject","eligible_for_ranking":false,"model":{"display_name":"EXAONE 4.5 33B","family":"EXAONE 4.5","architecture":"dense","total_parameters_b":33,"active_parameters_b":33},"artifact":{"publisher":"LG AI Research","model_id":"LGAI-EXAONE/EXAONE-4.5-33B-AWQ","revision":"31e6a965d0661bbe4a8b895e22a77f8271772ba0","quantization":"4-bit AWQ via compressed-tensors and Marlin","license":"EXAONE AI Model License Agreement 1.2 - NC","commercial_use":"not_allowed"},"serving":{"engine":"vLLM","version":"0.27.1","image":"vllm/vllm-openai:v0.27.1-ubuntu2404","image_digest":"sha256:6a278041c910af1a6db0f3555aac30dbdf93d7acb01008656d99007cf7781a3a","profile":"exaone45-awq-candidate","options":{"tensor_parallel_size":1,"max_model_len":32768,"max_num_seqs":2,"max_num_batched_tokens":8192,"gpu_memory_utilization":0.4,"kv_cache_dtype":"fp8","prefix_caching":true,"chunked_prefill":true,"async_scheduling":true,"tool_call_parser":"hermes","reasoning_parser":"qwen3","thinking":false},"speculative":{"mode":"off","draft_model":null,"num_tokens":null,"acceptance_pct":null}},"validation":{"api":"pass","chat":"pass","tool_simple":{"passed":6,"attempts":6},"tool_nested":{"passed":0,"attempts":6},"tool_large_surface":{"passed":6,"attempts":6},"answer_quality":"not_run"},"metrics":{"ttft_p50_ms":131,"ttft_p95_ms":null,"tpot_p50_ms":117.054,"e2e_p50_s":29.978,"single_user_decode_tps_p50":8.543,"aggregate_output_tps":17.057,"concurrency":2,"request_throughput_rps":null,"accelerator_process_memory_mib":36531,"host_available_memory_gib":72},"notes":["Nested Tool Calling이 6회 모두 실패했습니다.","비상업용 checkpoint이므로 한국어 benchmark 참고 모델로만 유지합니다.","MTP off 구성이 모델 카드 권장 MTP n3 구성보다 빨랐습니다."],"provenance":{"measurement_scope":"EXAONE Quick run log에 기록된 A/B 측정","source_record_sha256":"7fa6d9b285a948156dc4c6f3a95a83bf988caf1860a20c8edc0a13273b19d175"}},{"id":"20260821-exaone45-awq-mtp-n3","observed_on":"2026-08-21","comparison_group":"dgx-spark-quick-2026-08-21","status":"partial","promotion":"reject","eligible_for_ranking":false,"model":{"display_name":"EXAONE 4.5 33B","family":"EXAONE 4.5","architecture":"dense","total_parameters_b":33,"active_parameters_b":33},"artifact":{"publisher":"LG AI Research","model_id":"LGAI-EXAONE/EXAONE-4.5-33B-AWQ","revision":"31e6a965d0661bbe4a8b895e22a77f8271772ba0","quantization":"4-bit AWQ via compressed-tensors and Marlin","license":"EXAONE AI Model License Agreement 1.2 - NC","commercial_use":"not_allowed"},"serving":{"engine":"vLLM","version":"0.27.1","image":"vllm/vllm-openai:v0.27.1-ubuntu2404","image_digest":"sha256:6a278041c910af1a6db0f3555aac30dbdf93d7acb01008656d99007cf7781a3a","profile":"diagnostic EXAONE MTP n3 A/B; not retained","options":{"tensor_parallel_size":1,"max_model_len":32768,"max_num_seqs":2,"max_num_batched_tokens":8192,"gpu_memory_utilization":0.4,"kv_cache_dtype":"fp8","prefix_caching":true,"chunked_prefill":true,"async_scheduling":true,"tool_call_parser":"hermes","reasoning_parser":"qwen3","thinking":false},"speculative":{"mode":"mtp","draft_model":null,"num_tokens":3,"acceptance_pct":0.088}},"validation":{"api":"pass","chat":"pass","tool_simple":{"passed":1,"attempts":1},"tool_nested":{"passed":0,"attempts":1},"tool_large_surface":{"passed":1,"attempts":1},"answer_quality":"not_run"},"metrics":{"ttft_p50_ms":286,"ttft_p95_ms":null,"tpot_p50_ms":180.47,"e2e_p50_s":46.315,"single_user_decode_tps_p50":5.541,"aggregate_output_tps":11.046,"concurrency":2,"request_throughput_rps":null,"accelerator_process_memory_mib":36343,"host_available_memory_gib":71},"notes":["관측된 draft token의 0.088%만 수락되어 A/B 후보에서 제외했습니다.","Nested Tool Calling이 실패했고 checkpoint는 비상업용입니다."],"provenance":{"measurement_scope":"EXAONE Quick run log에 기록된 A/B 측정","source_record_sha256":"7fa6d9b285a948156dc4c6f3a95a83bf988caf1860a20c8edc0a13273b19d175"}},{"id":"20260821-gemma4-nvfp4-vllm0271","observed_on":"2026-08-21","comparison_group":"dgx-spark-quick-2026-08-21","status":"blocked","promotion":"blocked","eligible_for_ranking":false,"model":{"display_name":"Gemma4 26B-A4B","family":"Gemma4","architecture":"moe","total_parameters_b":25.2,"active_parameters_b":3.8},"artifact":{"publisher":"NVIDIA","model_id":"nvidia/Gemma-4-26B-A4B-NVFP4","revision":"a19cfe00be84568a6867111c9a68c9c44fdcffe6","quantization":"ModelOpt NVFP4 experts-only","license":"실행 기록에 미기재","commercial_use":"not_recorded"},"serving":{"engine":"vLLM","version":"0.27.1","image":"vllm/vllm-openai:v0.27.1-ubuntu2404","image_digest":"sha256:6a278041c910af1a6db0f3555aac30dbdf93d7acb01008656d99007cf7781a3a","profile":"gemma4-nvfp4-candidate","options":{"tensor_parallel_size":1,"max_model_len":32768,"max_num_seqs":2,"max_num_batched_tokens":8192,"gpu_memory_utilization":0.4,"kv_cache_dtype":"auto","prefix_caching":true,"chunked_prefill":true,"async_scheduling":true,"tool_call_parser":"gemma4","reasoning_parser":"gemma4"},"speculative":{"mode":"off","draft_model":null,"num_tokens":null,"acceptance_pct":null}},"validation":{"api":"fail","chat":"not_run","tool_simple":{"passed":0,"attempts":0},"tool_nested":{"passed":0,"attempts":0},"tool_large_surface":{"passed":0,"attempts":0},"answer_quality":"not_run"},"metrics":{"ttft_p50_ms":null,"ttft_p95_ms":null,"tpot_p50_ms":null,"e2e_p50_s":null,"single_user_decode_tps_p50":null,"aggregate_output_tps":null,"concurrency":null,"request_throughput_rps":null,"accelerator_process_memory_mib":null,"host_available_memory_gib":null},"notes":["Heterogeneous head_dim 및 weight shape 호환성 오류로 API 준비 전에 중단되었습니다.","이전 Gemma4 development image도 현재 checkpoint layout을 처리하지 못했습니다.","호환성이 확인된 공식 runtime이 제공될 때만 재검증합니다."],"provenance":{"measurement_scope":"호환성 검증만 수행했으며 성능은 측정하지 않음","source_record_sha256":"fceefbb4c0ef73f470643e5f262a5a9999d78aa17e7bd6b3c4fb295549f76940"}},{"id":"20260821-gemma4-26b-q4-k-m-ollama","observed_on":"2026-08-21","comparison_group":"dgx-spark-gemma4-sequential-quick-2026-08","status":"pass","promotion":"reference","eligible_for_ranking":true,"model":{"display_name":"Gemma4 26B-A4B Q4_K_M","family":"Gemma4","architecture":"moe","total_parameters_b":25.8,"active_parameters_b":3.8},"artifact":{"publisher":"Google / Ollama Library","model_id":"registry.ollama.ai/library/gemma4:26b-a4b-it-q4_K_M","revision":"5571076f3d70050487b26b341705799e0ab29b808164f90d20d4cf84f699d251","quantization":"GGUF Q4_K_M","license":"Apache License 2.0","commercial_use":"allowed"},"serving":{"engine":"Ollama","version":"0.23.1","image":"ollama/ollama:latest","image_digest":"sha256:6077dbbd6508dce8973f8b91c30d8026b1279ab0483e15f0dfad469dba676c2f","profile":"gemma4-q4-k-m","options":{"context_length":32768,"num_parallel":2,"max_loaded_models":1,"keep_alive":"30m","flash_attention":true,"host":"127.0.0.1:11434","reasoning_effort":"none","chat_template_kwargs":false,"performance_prompt_profile":"sequential-integers"},"speculative":{"mode":"off","draft_model":null,"num_tokens":null,"acceptance_pct":null}},"validation":{"api":"pass","chat":"pass","tool_simple":{"passed":6,"attempts":6},"tool_nested":{"passed":6,"attempts":6},"tool_large_surface":{"passed":6,"attempts":6},"answer_quality":"not_run"},"metrics":{"ttft_p50_ms":842,"ttft_p95_ms":1202,"tpot_p50_ms":31.719,"e2e_p50_s":8.93,"single_user_decode_tps_p50":31.527,"aggregate_output_tps":20.451,"concurrency":2,"request_throughput_rps":0.08,"accelerator_process_memory_mib":20569,"host_available_memory_gib":89},"notes":["API, chat 및 deterministic Tool schema 3종을 모두 통과했습니다.","기존 repeated-word workload는 Ollama에서 조기 종료와 0-token usage를 반환해 sequential-integer workload를 별도 비교 그룹으로 측정했습니다.","vLLM NVFP4 호환성 실패와 별개인 Ollama GGUF 기준점이며 직접 성능 비교 대상은 아닙니다.","답변 품질과 application workflow는 아직 검증하지 않았습니다."],"provenance":{"measurement_scope":"DGX Spark localhost의 Ollama OpenAI-compatible endpoint에서 별도 sequential-output Quick run으로 측정","source_record_sha256":"99ec6e87594c2c1e59eed3c58b62391f1721b1b0383fc9f9350678c09aae9e79"}},{"id":"20260501-gemma4-bf16-smoke","observed_on":"2026-05-01","comparison_group":"dgx-spark-historical-smoke-2026-05-01","status":"pass","promotion":"historical","eligible_for_ranking":false,"model":{"display_name":"Gemma4 26B-A4B","family":"Gemma4","architecture":"moe","total_parameters_b":25.2,"active_parameters_b":3.8},"artifact":{"publisher":"Google","model_id":"google/gemma-4-26B-A4B-it","revision":null,"quantization":"BF16 Hugging Face checkpoint","license":"실행 기록에 미기재","commercial_use":"not_recorded"},"serving":{"engine":"vLLM","version":"0.18.2rc1.dev73+gdb7a17ecc","image":"vllm/vllm-openai:gemma4-cu130","image_digest":null,"profile":"gemma4-26b-bf16 historical service","options":{"tensor_parallel_size":1,"max_model_len":2048,"max_num_seqs":1,"gpu_memory_utilization":0.6,"enforce_eager":true,"multimodal_input":false},"speculative":{"mode":"off","draft_model":null,"num_tokens":null,"acceptance_pct":null}},"validation":{"api":"pass","chat":"pass","tool_simple":{"passed":0,"attempts":0},"tool_nested":{"passed":0,"attempts":0},"tool_large_surface":{"passed":0,"attempts":0},"answer_quality":"not_run"},"metrics":{"ttft_p50_ms":null,"ttft_p95_ms":null,"tpot_p50_ms":null,"e2e_p50_s":8.196,"single_user_decode_tps_p50":null,"aggregate_output_tps":null,"concurrency":1,"request_throughput_rps":null,"accelerator_process_memory_mib":75165,"host_available_memory_gib":6.1},"notes":["동일 하드웨어 계열에서 Gemma4 BF16 서빙이 과거에 성공했음을 확인하는 기록입니다.","2026-08-21 Quick benchmark와 직접 비교할 수 없습니다.","메모리 사용량이 큰 다른 서비스와 함께 실행할 때 사용 가능한 host memory가 약 6 GiB에 불과했습니다."],"provenance":{"measurement_scope":"과거 direct API smoke 및 server metric snapshot","source_record_sha256":"bd271c9b4999bacda7087d804997eb2e78d1cb27fb14d067fb9ffb41d2218345"}},{"id":"20260821-qwen38-nvfp4-sglang-mtp-rerun02","observed_on":"2026-08-21","comparison_group":"dgx-spark-quick-2026-08-21","status":"pass","promotion":"control","eligible_for_ranking":true,"model":{"display_name":"Qwen3.8 27B NVFP4 · SGLang MTP","family":"Qwen3.8","architecture":"dense","total_parameters_b":27,"active_parameters_b":27},"artifact":{"publisher":"RadixArk","model_id":"RadixArk/Qwen3.8-27B-NVFP4","revision":"554ebba9b5f1b79dc11246341960360e6ef05ef4","quantization":"ModelOpt NVFP4 mixed precision","license":"실행 기록에 미기재","commercial_use":"not_recorded"},"serving":{"engine":"SGLang","version":"0.0.0.dev0+qwen38.27b.g561c8f3","image":"lmsysorg/sglang@sha256:3c0abdf41ef22de9d7a859dc16ed71eae69452e36c91f071a25e60c85a6d1fc6","image_digest":"sha256:3c0abdf41ef22de9d7a859dc16ed71eae69452e36c91f071a25e60c85a6d1fc6","profile":"engines/sglang/scripts/serve-qwen38-27b-nvfp4 mtp","options":{"context_length":32768,"mem_fraction_static":0.7,"attention_backend":"flashinfer","chunked_prefill_size":8192,"kv_cache_dtype":"fp8_e4m3","mamba_ssm_dtype":"bfloat16","mamba_full_memory_ratio":4.21,"mamba_radix_cache_strategy":"extra_buffer_lazy","max_mamba_cache_size":8,"max_running_requests":2},"speculative":{"mode":"mtp","draft_model":null,"num_tokens":4,"acceptance_pct":null}},"validation":{"api":"pass","chat":"pass","tool_simple":{"passed":6,"attempts":6},"tool_nested":{"passed":6,"attempts":6},"tool_large_surface":{"passed":6,"attempts":6},"answer_quality":"not_run"},"metrics":{"ttft_p50_ms":209.0,"ttft_p95_ms":211.0,"tpot_p50_ms":51.875,"e2e_p50_s":13.437,"single_user_decode_tps_p50":19.277,"aggregate_output_tps":37.152,"concurrency":2,"request_throughput_rps":0.145,"accelerator_process_memory_mib":76888.0,"host_available_memory_gib":29.717},"notes":["동일 조건 canonical 재측정에서 Tool Calling 18/18을 통과했습니다.","closed-loop 네 요청이 모두 256-token length 종료되어 총 1,024 tokens를 생성했습니다."],"provenance":{"measurement_scope":"DGX Spark localhost의 SGLang MTP canonical Quick rerun","result_sha256":"8e8e07b54f9eb9753003b72b05541b38f77ddcdef792220c6ecd04a2d1fb44a6","source_record_sha256":"5f1aeca2015ef3ba04ef809574073546a8148107357e15efd0da95197ea4fb68"}},{"id":"20260821-qwen38-nvfp4-sglang-dspark-rerun01","observed_on":"2026-08-21","comparison_group":"dgx-spark-quick-2026-08-21","status":"pass","promotion":"advance","eligible_for_ranking":false,"model":{"display_name":"Qwen3.8 27B NVFP4 · SGLang DSpark","family":"Qwen3.8","architecture":"dense","total_parameters_b":27,"active_parameters_b":27},"artifact":{"publisher":"RadixArk","model_id":"RadixArk/Qwen3.8-27B-NVFP4","revision":"554ebba9b5f1b79dc11246341960360e6ef05ef4","quantization":"ModelOpt NVFP4 mixed precision","license":"실행 기록에 미기재","commercial_use":"not_recorded"},"serving":{"engine":"SGLang","version":"0.0.0.dev0+qwen38.27b.g561c8f3","image":"lmsysorg/sglang@sha256:3c0abdf41ef22de9d7a859dc16ed71eae69452e36c91f071a25e60c85a6d1fc6","image_digest":"sha256:3c0abdf41ef22de9d7a859dc16ed71eae69452e36c91f071a25e60c85a6d1fc6","profile":"engines/sglang/scripts/serve-qwen38-27b-nvfp4 dspark","options":{"context_length":32768,"mem_fraction_static":0.7,"attention_backend":"flashinfer","chunked_prefill_size":8192,"kv_cache_dtype":"fp8_e4m3","mamba_ssm_dtype":"bfloat16","mamba_full_memory_ratio":4.21,"mamba_radix_cache_strategy":"extra_buffer_lazy","max_mamba_cache_size":8,"max_running_requests":2},"speculative":{"mode":"external-draft","draft_model":"RadixArk/Qwen3.8-27B-DSpark","num_tokens":8,"acceptance_pct":null}},"validation":{"api":"pass","chat":"pass","tool_simple":{"passed":6,"attempts":6},"tool_nested":{"passed":6,"attempts":6},"tool_large_surface":{"passed":6,"attempts":6},"answer_quality":"not_run"},"metrics":{"ttft_p50_ms":323.0,"ttft_p95_ms":336.0,"tpot_p50_ms":19.601,"e2e_p50_s":5.324,"single_user_decode_tps_p50":51.019,"aggregate_output_tps":88.575,"concurrency":2,"request_throughput_rps":0.384,"accelerator_process_memory_mib":78091.0,"host_available_memory_gib":27.866},"notes":["동일 조건 canonical 재측정에서 Tool Calling 18/18을 통과했습니다.","closed-loop는 총 922 tokens와 2 stop, 2 length 종료이므로 aggregate throughput 순위에서 제외했습니다.","세 SGLang 구성 중 재현된 single-user decode TPS가 가장 높아 다음 characterization 후보로 유지합니다."],"provenance":{"measurement_scope":"DGX Spark localhost의 SGLang DSpark canonical Quick rerun","result_sha256":"5ef218d87662d6f1dc80e3b4691c5d7d04c973dbd172eafe753534dba8460b04","source_record_sha256":"5f1aeca2015ef3ba04ef809574073546a8148107357e15efd0da95197ea4fb68"}},{"id":"20260821-qwen38-nvfp4-sglang-dflash2-rerun01","observed_on":"2026-08-21","comparison_group":"dgx-spark-quick-2026-08-21","status":"pass","promotion":"reference","eligible_for_ranking":false,"model":{"display_name":"Qwen3.8 27B NVFP4 · SGLang DFlash2","family":"Qwen3.8","architecture":"dense","total_parameters_b":27,"active_parameters_b":27},"artifact":{"publisher":"RadixArk","model_id":"RadixArk/Qwen3.8-27B-NVFP4","revision":"554ebba9b5f1b79dc11246341960360e6ef05ef4","quantization":"ModelOpt NVFP4 mixed precision","license":"실행 기록에 미기재","commercial_use":"not_recorded"},"serving":{"engine":"SGLang","version":"SGLang c14312a66420b75ca9a11bf1817c4db1fa26b097 with DFlash2 c90d8c34cf795185ee8de736b7ded9bca3fe0de1","image":"lmsysorg/sglang:qwen38-27b-dflash2","image_digest":null,"profile":"engines/sglang/scripts/serve-qwen38-27b-nvfp4 dflash2","options":{"image_id":"sha256:9601ae3d9f50cbaf404dde3566226d925ab0b1ffc5cbade428768d2ebe7be524","context_length":32768,"mem_fraction_static":0.7,"attention_backend":"flashinfer","chunked_prefill_size":8192,"kv_cache_dtype":"fp8_e4m3","mamba_ssm_dtype":"bfloat16","mamba_full_memory_ratio":4.21,"mamba_radix_cache_strategy":"extra_buffer","max_mamba_cache_size":10,"max_running_requests":2},"speculative":{"mode":"external-draft","draft_model":"z-lab/Qwen3.8-27B-DFlash2","num_tokens":8,"acceptance_pct":null}},"validation":{"api":"pass","chat":"pass","tool_simple":{"passed":6,"attempts":6},"tool_nested":{"passed":6,"attempts":6},"tool_large_surface":{"passed":6,"attempts":6},"answer_quality":"not_run"},"metrics":{"ttft_p50_ms":325.0,"ttft_p95_ms":362.0,"tpot_p50_ms":20.451,"e2e_p50_s":5.252,"single_user_decode_tps_p50":48.897,"aggregate_output_tps":82.649,"concurrency":2,"request_throughput_rps":0.422,"accelerator_process_memory_mib":78279.0,"host_available_memory_gib":28.984},"notes":["동일 조건 canonical 재측정에서 Tool Calling 18/18을 통과했습니다.","closed-loop는 네 요청 모두 stop으로 총 784 tokens를 생성해 aggregate throughput 순위에서 제외했습니다.","초기 요약의 66.755 decode tok/s는 재현되지 않았고 cache 8 진단도 48.260 tok/s였습니다.","custom image provenance와 성능 재현성 문제를 해소하기 전까지 참고 구성으로 유지합니다."],"provenance":{"measurement_scope":"DGX Spark localhost의 SGLang DFlash2 canonical Quick rerun","result_sha256":"41953208b866fd09f2c2b9ecc981585e56db1b92f6ed8657337502cef078a147","source_record_sha256":"5f1aeca2015ef3ba04ef809574073546a8148107357e15efd0da95197ea4fb68"}},{"id":"20260825-gemma4-26b-a4b-nvfp4-vllm-baseline02","observed_on":"2026-08-25","comparison_group":"dgx-spark-gemma4-sequential-quick-2026-08","status":"pass","promotion":"advance","eligible_for_ranking":true,"model":{"display_name":"Gemma4 26B-A4B NVFP4 · vLLM","family":"Gemma4","architecture":"moe","total_parameters_b":25.2,"active_parameters_b":3.8},"artifact":{"publisher":"NVIDIA","model_id":"nvidia/Gemma-4-26B-A4B-NVFP4","revision":"a19cfe00be84568a6867111c9a68c9c44fdcffe6","quantization":"ModelOpt NVFP4; Marlin weight-only execution on GB10","license":"실행 기록에 미기재","commercial_use":"not_recorded"},"serving":{"engine":"vLLM","version":"0.19.2rc1.dev134+gfe9c3d6c5.cu130","image":"vllm/vllm-openai:cu130-nightly","image_digest":"sha256:3dbe092ec5b2cef63b6104d33fa75d6ce53a7870962529ada69f78bbbc38e776","profile":"engines/vllm/docker-compose.single-node.yml#vllm-gemma4-26b-a4b-nvfp4-candidate","options":{"tensor_parallel_size":1,"context_length":32768,"max_num_seqs":2,"max_num_batched_tokens":8192,"gpu_memory_utilization":0.4,"kv_cache_dtype":"auto","moe_backend":"marlin","prefix_caching":true,"chunked_prefill":true,"reasoning_parser":"gemma4","tool_call_parser":"gemma4","enforce_eager":true,"served_model_names":["gemma-4-26b-a4b-nvfp4"]},"speculative":{"mode":"off","draft_model":null,"num_tokens":null,"acceptance_pct":null}},"validation":{"api":"pass","chat":"pass","tool_simple":{"passed":3,"attempts":3},"tool_nested":{"passed":3,"attempts":3},"tool_large_surface":{"passed":3,"attempts":3},"answer_quality":"not_run"},"metrics":{"ttft_p50_ms":92.0,"ttft_p95_ms":122.0,"tpot_p50_ms":46.138,"e2e_p50_s":11.861,"single_user_decode_tps_p50":21.674,"aggregate_output_tps":34.033,"concurrency":2,"request_throughput_rps":0.133,"accelerator_process_memory_mib":48101.0,"host_available_memory_gib":59.542},"notes":["한국어 chat과 단순·중첩·32-tool 선택을 각각 3회 통과했습니다.","DGX Spark GB10에서는 native FP4 compute가 아니라 Marlin weight-only FP4 경로를 사용합니다.","MTP-off 비교 기준선이며 FP8 KV-cache scaling 경고를 고려해 답변 품질은 별도로 평가해야 합니다."],"provenance":{"measurement_scope":"DGX Spark local bridge endpoint의 vLLM NVFP4 MTP-off canonical Quick run","result_sha256":"3a2690fcedf53d4812ed34dca95a3ed5303f5d39263d0fb59425af2bea5f71b8","source_record_sha256":"a53281b9fd0d521f539e2fd4d15de7b056ba5e06f495455e6c83d8f09637ebbc"}},{"id":"20260825-gemma4-26b-a4b-nvfp4-vllm-seq4-quick01","observed_on":"2026-08-25","comparison_group":"dgx-spark-gemma4-sequential-quick-2026-08","status":"pass","promotion":"advance","eligible_for_ranking":true,"model":{"display_name":"Gemma4 26B-A4B NVFP4 · vLLM seq4","family":"Gemma4","architecture":"moe","total_parameters_b":25.2,"active_parameters_b":3.8},"artifact":{"publisher":"NVIDIA","model_id":"nvidia/Gemma-4-26B-A4B-NVFP4","revision":"a19cfe00be84568a6867111c9a68c9c44fdcffe6","quantization":"ModelOpt NVFP4; Marlin weight-only execution on GB10","license":"실행 기록에 미기재","commercial_use":"not_recorded"},"serving":{"engine":"vLLM","version":"0.19.2rc1.dev134+gfe9c3d6c5.cu130","image":"vllm/vllm-openai:cu130-nightly","image_digest":"sha256:3dbe092ec5b2cef63b6104d33fa75d6ce53a7870962529ada69f78bbbc38e776","profile":"engines/vllm/docker-compose.single-node.yml#vllm-gemma4-26b-a4b-nvfp4-candidate","options":{"tensor_parallel_size":1,"context_length":32768,"max_num_seqs":4,"max_num_batched_tokens":8192,"gpu_memory_utilization":0.4,"kv_cache_dtype":"auto","moe_backend":"marlin","prefix_caching":true,"chunked_prefill":true,"reasoning_parser":"gemma4","tool_call_parser":"gemma4","enforce_eager":true,"served_model_names":["gemma-4-26b-a4b-nvfp4"]},"speculative":{"mode":"off","draft_model":null,"num_tokens":null,"acceptance_pct":null}},"validation":{"api":"pass","chat":"pass","tool_simple":{"passed":3,"attempts":3},"tool_nested":{"passed":3,"attempts":3},"tool_large_surface":{"passed":3,"attempts":3},"answer_quality":"not_run"},"metrics":{"ttft_p50_ms":86.0,"ttft_p95_ms":101.0,"tpot_p50_ms":46.073,"e2e_p50_s":11.839,"single_user_decode_tps_p50":21.704,"aggregate_output_tps":40.948,"concurrency":2,"request_throughput_rps":0.16,"accelerator_process_memory_mib":48131.0,"host_available_memory_gib":58.558},"notes":["max_num_seqs만 2에서 4로 변경한 A/B 후보이며 한국어 chat과 단순·중첩·32-tool 선택을 각각 3회 통과했습니다.","동일 Quick workload의 C2 aggregate output TPS가 34.033에서 40.948로 증가했고 accelerator process memory는 30 MiB 증가했습니다.","C4·C8 결과는 1회 characterization preview이므로 표준 용량 측정이나 품질 평가를 대신하지 않습니다."],"provenance":{"measurement_scope":"DGX Spark local bridge endpoint의 vLLM NVFP4 MTP-off max_num_seqs=4 canonical Quick run","result_sha256":"c0c5464693778c18a048838185f57be8d414390f9de383c93492644212dfba07","source_record_sha256":"f8895edd68379f6f448814bf3c80f3e31c5ddaa7a98776f3f3aec650adc13675"}},{"id":"20260825-gemma4-26b-a4b-nvfp4-vllm-seq4-compiled-quick01","observed_on":"2026-08-25","comparison_group":"dgx-spark-gemma4-sequential-quick-2026-08","status":"pass","promotion":"advance","eligible_for_ranking":true,"model":{"display_name":"Gemma4 26B-A4B NVFP4 · vLLM compiled","family":"Gemma4","architecture":"moe","total_parameters_b":25.2,"active_parameters_b":3.8},"artifact":{"publisher":"NVIDIA","model_id":"nvidia/Gemma-4-26B-A4B-NVFP4","revision":"a19cfe00be84568a6867111c9a68c9c44fdcffe6","quantization":"ModelOpt NVFP4; Marlin weight-only execution on GB10","license":"실행 기록에 미기재","commercial_use":"not_recorded"},"serving":{"engine":"vLLM","version":"0.19.2rc1.dev134+gfe9c3d6c5.cu130","image":"vllm/vllm-openai:cu130-nightly","image_digest":"sha256:3dbe092ec5b2cef63b6104d33fa75d6ce53a7870962529ada69f78bbbc38e776","profile":"engines/vllm/docker-compose.single-node.yml#vllm-gemma4-26b-a4b-nvfp4-candidate","options":{"tensor_parallel_size":1,"context_length":32768,"max_num_seqs":4,"max_num_batched_tokens":8192,"gpu_memory_utilization":0.4,"kv_cache_dtype":"auto","moe_backend":"marlin","prefix_caching":true,"chunked_prefill":true,"reasoning_parser":"gemma4","tool_call_parser":"gemma4","enforce_eager":false,"compile_mode":"VLLM_COMPILE","cudagraph_mode":"FULL_AND_PIECEWISE","cudagraph_capture_sizes":[1,2,4,8],"served_model_names":["gemma-4-26b-a4b-nvfp4"]},"speculative":{"mode":"off","draft_model":null,"num_tokens":null,"acceptance_pct":null}},"validation":{"api":"pass","chat":"pass","tool_simple":{"passed":3,"attempts":3},"tool_nested":{"passed":3,"attempts":3},"tool_large_surface":{"passed":3,"attempts":3},"answer_quality":"not_run"},"metrics":{"ttft_p50_ms":80.0,"ttft_p95_ms":106.0,"tpot_p50_ms":40.856,"e2e_p50_s":10.499,"single_user_decode_tps_p50":24.476,"aggregate_output_tps":42.189,"concurrency":2,"request_throughput_rps":0.165,"accelerator_process_memory_mib":48381.0,"host_available_memory_gib":58.185},"notes":["eager seq4 기준에서 --enforce-eager만 제거해 vLLM compile과 CUDA Graphs를 활성화한 A/B 후보입니다.","두 Quick 실행에서 single-user decode p50이 24.476과 24.472 tok/s로 재현되어 eager 대비 12.8% 증가했습니다.","한국어 chat과 단순·중첩·32-tool 선택을 각각 3회 통과했습니다.","compiled 구성의 답변 품질은 별도로 평가해야 합니다."],"provenance":{"measurement_scope":"DGX Spark local bridge endpoint의 vLLM NVFP4 MTP-off seq4 compile/CUDA Graph canonical Quick run","result_sha256":"8394cd2595ce2c7e0729729c282d453da7b942ceb744b4ccdd97d99c13dc271f","source_record_sha256":"b4d80d914b3c2a502f390d13a3e643d98c5148a433bda26c2518e69d5e8a45d1"}}]}</script>
+  <script>
+    const data = JSON.parse(document.getElementById('leaderboard-data').textContent);
+    const runs = data.runs;
+    const groups = data.comparison_groups;
+    const currentGroup = Object.keys(groups)[0];
+    const promotionLabels = {
+      advance: '후속 검증 대상', control: '비교 기준', reference: '참고 모델',
+      reject: '후보 제외', blocked: '호환성 문제', historical: '과거 측정'
+    };
+    const statusLabels = { pass: 'Quick 검증 통과', partial: '일부 항목 실패', blocked: 'API 준비 실패' };
+    const comparisonLevelLabels = {
+      directional: '방향성 비교', not_comparable: '직접 비교 불가', standard: '정식 비교'
+    };
+    const commercialUseLabels = {
+      allowed: '상업적 사용 가능', not_allowed: '상업적 사용 불가', not_recorded: '실행 기록에 미기재'
+    };
+    const colors = {
+      advance: '#2d6a57', control: '#315f8c', reference: '#655b86',
+      reject: '#9a5b2e', blocked: '#737e88', historical: '#737e88'
+    };
+    const rankable = runs
+      .filter(run => run.comparison_group === currentGroup && run.eligible_for_ranking && run.status === 'pass')
+      .sort((a, b) => b.metrics.aggregate_output_tps - a.metrics.aggregate_output_tps);
+    const ranks = Object.fromEntries(rankable.map((run, index) => [run.id, index + 1]));
+    let selectedId = rankable[0]?.id || runs[0]?.id;
+
+    const escapeHtml = value => String(value ?? '')
+      .replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;').replaceAll("'", '&#039;');
+    const formatNumber = (value, digits = 1) => value == null ? '—' : Number(value).toLocaleString('en-US', { maximumFractionDigits: digits });
+    const shortHash = value => value ? (value.length > 18 ? `${value.slice(0, 16)}…` : value) : '미기재';
+    const specLabel = run => {
+      const spec = run.serving.speculative;
+      if (spec.mode === 'off') return 'Speculative decoding off';
+      if (spec.mode === 'mtp') return `MTP n${spec.num_tokens}`;
+      return `DSpark n${spec.num_tokens}`;
+    };
+    const toolSummary = run => {
+      const parts = ['tool_simple', 'tool_nested', 'tool_large_surface'].map(key => run.validation[key]);
+      const passed = parts.reduce((sum, item) => sum + item.passed, 0);
+      const attempts = parts.reduce((sum, item) => sum + item.attempts, 0);
+      return attempts ? `${passed}/${attempts}` : '미실행';
+    };
+    const toolPassed = run => {
+      const keys = ['tool_simple', 'tool_nested', 'tool_large_surface'];
+      return keys.every(key => run.validation[key].attempts > 0 && run.validation[key].passed === run.validation[key].attempts);
+    };
+    const provenanceHref = () => '../benchmarks/results/dgx-spark.json';
+
+    function setupPage() {
+      document.getElementById('observedThrough').textContent = `기준일 ${data.observed_through}`;
+      document.getElementById('platformName').textContent = `${data.platform.display_name} / ${data.platform.accelerator}`;
+      document.getElementById('recordCount').textContent = `${runs.length}개`;
+      document.getElementById('rankedCount').textContent = `${rankable.length}개`;
+      document.getElementById('leaderName').textContent = rankable[0]?.model.display_name || '—';
+
+      const groupSelect = document.getElementById('groupFilter');
+      groupSelect.innerHTML = `<option value="all">전체 비교 그룹</option>` +
+        Object.entries(groups).map(([id, group]) => `<option value="${escapeHtml(id)}">${escapeHtml(group.label)}</option>`).join('');
+      groupSelect.value = 'all';
+      updateMethod();
+      renderAll();
+    }
+
+    function filteredRuns() {
+      const search = document.getElementById('searchInput').value.trim().toLowerCase();
+      const group = document.getElementById('groupFilter').value;
+      const stage = document.getElementById('stageFilter').value;
+      const sort = document.getElementById('sortBy').value;
+      const visible = runs.filter(run => {
+        const searchable = JSON.stringify({
+          model: run.model, artifact: run.artifact, serving: run.serving,
+          status: run.status, promotion: run.promotion
+        }).toLowerCase();
+        return (!search || searchable.includes(search)) &&
+          (group === 'all' || run.comparison_group === group) &&
+          (stage === 'all' || run.promotion === stage);
+      });
+      const descendingMetric = field => (a, b) => (b.metrics[field] ?? -Infinity) - (a.metrics[field] ?? -Infinity);
+      const ascendingMetric = field => (a, b) => (a.metrics[field] ?? Infinity) - (b.metrics[field] ?? Infinity);
+      const sorters = {
+        rank: (a, b) => (ranks[a.id] ?? 999) - (ranks[b.id] ?? 999) || descendingMetric('aggregate_output_tps')(a, b),
+        single: descendingMetric('single_user_decode_tps_p50'),
+        ttft: ascendingMetric('ttft_p50_ms'),
+        memory: ascendingMetric('accelerator_process_memory_mib'),
+        model: (a, b) => a.model.display_name.localeCompare(b.model.display_name)
+      };
+      return visible.sort(sorters[sort]);
+    }
+
+    function renderAll() {
+      const visible = filteredRuns();
+      if (!visible.some(run => run.id === selectedId)) selectedId = visible[0]?.id || selectedId;
+      renderTable(visible);
+      const plotRuns = document.getElementById('groupFilter').value === 'all'
+        ? visible.filter(run => run.comparison_group === currentGroup)
+        : visible;
+      renderPlot(plotRuns);
+      renderDetail(runs.find(run => run.id === selectedId));
+    }
+
+    function renderTable(visible) {
+      const body = document.getElementById('leaderboardBody');
+      const bestAggregate = Math.max(...visible.map(run => run.metrics.aggregate_output_tps ?? -Infinity));
+      if (!visible.length) {
+        body.innerHTML = '<tr><td class="empty-row" colspan="10">선택한 조건에 해당하는 기록이 없습니다.</td></tr>';
+      } else {
+        body.innerHTML = visible.map(run => {
+          const metrics = run.metrics;
+          const rank = ranks[run.id] ? `#${ranks[run.id]}` : '—';
+          const toolClass = toolPassed(run) ? 'pass' : (run.validation.api === 'fail' ? 'blocked' : 'partial');
+          const bestClass = metrics.aggregate_output_tps === bestAggregate && bestAggregate !== -Infinity ? ' best' : '';
+          return `<tr data-id="${escapeHtml(run.id)}" class="${run.id === selectedId ? 'is-selected' : ''}" tabindex="0">
+            <td><span class="rank">${rank}</span></td>
+            <td><span class="config-name">${escapeHtml(run.model.display_name)}</span><span class="config-meta">${escapeHtml(run.artifact.quantization)} · ${escapeHtml(specLabel(run))}<br>${escapeHtml(run.serving.engine)} ${escapeHtml(run.serving.version)} · ${escapeHtml(comparisonLevelLabels[groups[run.comparison_group].comparison_level] || groups[run.comparison_group].comparison_level)}</span></td>
+            <td><span class="badge ${escapeHtml(run.promotion)}">${escapeHtml(promotionLabels[run.promotion])}</span></td>
+            <td><span class="badge ${toolClass}">${escapeHtml(toolSummary(run))}</span></td>
+            <td><span class="metric">${formatNumber(metrics.single_user_decode_tps_p50, 3)}</span></td>
+            <td><span class="metric${bestClass}">${formatNumber(metrics.aggregate_output_tps, 3)}</span></td>
+            <td><span class="metric">${metrics.ttft_p50_ms == null ? '—' : `${formatNumber(metrics.ttft_p50_ms, 0)} ms`}</span></td>
+            <td><span class="metric">${metrics.e2e_p50_s == null ? '—' : `${formatNumber(metrics.e2e_p50_s, 3)} s`}</span></td>
+            <td><span class="metric">${metrics.accelerator_process_memory_mib == null ? '—' : `${formatNumber(metrics.accelerator_process_memory_mib / 1024, 1)} GiB`}</span></td>
+            <td><a class="source-link" href="${escapeHtml(provenanceHref(run))}" target="_blank" rel="noreferrer">정규화 결과 ↗</a></td>
+          </tr>`;
+        }).join('');
+      }
+      document.getElementById('tableCount').textContent = `${visible.length} / ${runs.length}개 서빙 구성 표시 · 순위가 없는 기록은 직접 비교 불가, 검증 조건 미충족 또는 과거 측정입니다.`;
+      body.querySelectorAll('tr[data-id]').forEach(row => {
+        const activate = () => selectRun(row.dataset.id);
+        row.addEventListener('click', event => { if (!event.target.closest('a')) activate(); });
+        row.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); activate(); } });
+      });
+    }
+
+    function renderPlot(visible) {
+      const svg = document.getElementById('tradeoffPlot');
+      const measured = visible.filter(run => run.metrics.ttft_p50_ms != null && run.metrics.aggregate_output_tps != null);
+      if (!measured.length) {
+        svg.innerHTML = '<text x="430" y="205" text-anchor="middle" class="plot-empty">선택한 비교 그룹에는 동일 기준으로 표시할 성능 측정값이 없습니다.</text>';
+        return;
+      }
+      const width = 860, height = 410;
+      const margin = { left: 70, right: 36, top: 26, bottom: 58 };
+      const innerW = width - margin.left - margin.right;
+      const innerH = height - margin.top - margin.bottom;
+      const xMax = Math.max(...measured.map(run => run.metrics.ttft_p50_ms)) * 1.12;
+      const yMax = Math.max(...measured.map(run => run.metrics.aggregate_output_tps)) * 1.15;
+      const x = value => margin.left + (value / xMax) * innerW;
+      const y = value => margin.top + innerH - (value / yMax) * innerH;
+      const grid = [];
+      for (let i = 0; i <= 4; i++) {
+        const gx = margin.left + (innerW * i / 4);
+        const gy = margin.top + (innerH * i / 4);
+        grid.push(`<line x1="${gx}" y1="${margin.top}" x2="${gx}" y2="${margin.top + innerH}" stroke="#ced9e4" stroke-width="1"/>`);
+        grid.push(`<text x="${gx}" y="${height - 25}" text-anchor="middle" class="axis-label">${Math.round(xMax * i / 4)} ms</text>`);
+        grid.push(`<line x1="${margin.left}" y1="${gy}" x2="${margin.left + innerW}" y2="${gy}" stroke="#ced9e4" stroke-width="1"/>`);
+        grid.push(`<text x="${margin.left - 12}" y="${gy + 4}" text-anchor="end" class="axis-label">${Math.round(yMax * (4 - i) / 4)}</text>`);
+      }
+      const points = measured.map(run => {
+        const memory = run.metrics.accelerator_process_memory_mib ?? 40000;
+        const radius = Math.max(7, Math.min(15, 7 + (memory - 30000) / 6000));
+        const px = x(run.metrics.ttft_p50_ms);
+        const py = y(run.metrics.aggregate_output_tps);
+        const label = `${run.model.family} · ${specLabel(run)}`;
+        const anchor = px > width * .73 ? 'end' : 'start';
+        const labelX = anchor === 'end' ? px - radius - 7 : px + radius + 7;
+        return `<g class="plot-point ${run.id === selectedId ? 'is-selected' : ''}" data-id="${escapeHtml(run.id)}" role="button" tabindex="0" aria-label="${escapeHtml(label)}, TTFT ${run.metrics.ttft_p50_ms} ms, aggregate ${run.metrics.aggregate_output_tps} tokens per second">
+          <circle cx="${px}" cy="${py}" r="${radius}" fill="${colors[run.promotion]}" fill-opacity=".82" stroke="#ffffff" stroke-width="3"/>
+          <text x="${labelX}" y="${py + 4}" text-anchor="${anchor}" class="point-label">${escapeHtml(label)}</text>
+        </g>`;
+      }).join('');
+      svg.innerHTML = `${grid.join('')}
+        <text x="${margin.left + innerW / 2}" y="${height - 3}" text-anchor="middle" class="axis-label">TTFT p50 (ms, 낮을수록 우수)</text>
+        <text x="15" y="${margin.top + innerH / 2}" text-anchor="middle" transform="rotate(-90 15 ${margin.top + innerH / 2})" class="axis-label">Aggregate output throughput (tok/s, 높을수록 우수)</text>
+        ${points}`;
+      svg.querySelectorAll('.plot-point').forEach(point => {
+        const activate = () => selectRun(point.dataset.id);
+        point.addEventListener('click', activate);
+        point.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); activate(); } });
+      });
+    }
+
+    function renderDetail(run) {
+      const panel = document.getElementById('detailPanel');
+      if (!run) {
+        panel.innerHTML = '<p>표시할 기록이 없습니다.</p>';
+        return;
+      }
+      const options = Object.entries(run.serving.options)
+        .map(([key, value]) => `<span class="option">${escapeHtml(key)}=${escapeHtml(value)}</span>`).join('');
+      panel.innerHTML = `
+        <p class="eyebrow">선택한 서빙 구성</p>
+        <h3>${escapeHtml(run.model.display_name)}</h3>
+        <p class="detail-kicker">${escapeHtml(run.id)}</p>
+        <div class="badge-row">
+          <span class="badge ${escapeHtml(run.promotion)}">${escapeHtml(promotionLabels[run.promotion])}</span>
+          <span class="badge ${escapeHtml(run.status)}">${escapeHtml(statusLabels[run.status])}</span>
+          <span class="badge ${toolPassed(run) ? 'pass' : 'partial'}">Tool ${escapeHtml(toolSummary(run))}</span>
+        </div>
+        <dl class="detail-list">
+          <div><dt>모델 아티팩트</dt><dd class="mono">${escapeHtml(run.artifact.model_id)}@${escapeHtml(shortHash(run.artifact.revision))}</dd></div>
+          <div><dt>가중치 및 라이선스</dt><dd>${escapeHtml(run.artifact.quantization)}<br><span class="mono">${escapeHtml(run.artifact.license)} · ${escapeHtml(commercialUseLabels[run.artifact.commercial_use] || run.artifact.commercial_use)}</span></dd></div>
+          <div><dt>런타임</dt><dd>${escapeHtml(run.serving.engine)} ${escapeHtml(run.serving.version)}<br><span class="mono">${escapeHtml(run.serving.image)} · ${escapeHtml(shortHash(run.serving.image_digest))}</span></dd></div>
+          <div><dt>Speculative decoding</dt><dd>${escapeHtml(specLabel(run))}${run.serving.speculative.acceptance_pct == null ? '' : ` · draft acceptance ${formatNumber(run.serving.speculative.acceptance_pct, 3)}%`}</dd></div>
+          <div><dt>서빙 옵션</dt><dd><div class="options">${options}</div></dd></div>
+          <div><dt>비교 그룹</dt><dd>${escapeHtml(groups[run.comparison_group].label)}<br><span class="mono">${escapeHtml(comparisonLevelLabels[groups[run.comparison_group].comparison_level] || groups[run.comparison_group].comparison_level)}</span></dd></div>
+          <div><dt>근거</dt><dd><a href="${escapeHtml(provenanceHref(run))}" target="_blank" rel="noreferrer">정규화 결과 ↗</a></dd></div>
+        </dl>
+        <ul class="detail-notes">${run.notes.map(note => `<li>${escapeHtml(note)}</li>`).join('')}</ul>`;
+    }
+
+    function selectRun(id) {
+      selectedId = id;
+      renderAll();
+    }
+
+    function updateMethod() {
+      const groupId = document.getElementById('groupFilter').value;
+      if (groupId === 'all') {
+        document.getElementById('plotGroupLabel').textContent = '순위 비교 그룹만 시각화';
+        document.getElementById('methodLimitations').innerHTML = [
+          '전체 목록에는 workload와 런타임 조건이 다른 실행 기록이 함께 표시됩니다.',
+          '순위와 성능 그래프는 OpenAI-compatible Quick 비교 그룹에만 적용하며, 다른 그룹의 수치는 해당 그룹 안에서만 해석해야 합니다.'
+        ].map(item => `<li>${escapeHtml(item)}</li>`).join('');
+        return;
+      }
+      const group = groups[groupId];
+      document.getElementById('plotGroupLabel').textContent = group.label;
+      document.getElementById('methodLimitations').innerHTML = group.limitations.map(item => `<li>${escapeHtml(item)}</li>`).join('');
+    }
+
+    ['searchInput', 'groupFilter', 'stageFilter', 'sortBy'].forEach(id => {
+      const element = document.getElementById(id);
+      element.addEventListener(id === 'searchInput' ? 'input' : 'change', () => {
+        if (id === 'groupFilter') updateMethod();
+        renderAll();
+      });
+    });
+
+    setupPage();
+  </script>
+</body>
+</html>

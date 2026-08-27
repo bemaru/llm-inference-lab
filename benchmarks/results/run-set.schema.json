@@ -1,0 +1,501 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "run-set.schema.json",
+  "title": "LLM inference benchmark run set",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "observed_through",
+    "platform",
+    "comparison_groups",
+    "runs"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1.0"
+    },
+    "observed_through": {
+      "type": "string",
+      "format": "date"
+    },
+    "platform": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "display_name",
+        "accelerator",
+        "accelerator_count",
+        "memory_gib"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "display_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "accelerator": {
+          "type": "string",
+          "minLength": 1
+        },
+        "accelerator_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "memory_gib": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
+      }
+    },
+    "comparison_groups": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "$ref": "#/$defs/comparison_group"
+      }
+    },
+    "runs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/run"
+      }
+    }
+  },
+  "$defs": {
+    "nullable_number": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "nullable_integer": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "nullable_string": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "serving_option_scalar": {
+      "type": [
+        "string",
+        "number",
+        "integer",
+        "boolean",
+        "null"
+      ]
+    },
+    "comparison_group": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "label",
+        "classification",
+        "comparison_level",
+        "workload",
+        "limitations"
+      ],
+      "properties": {
+        "label": {
+          "type": "string",
+          "minLength": 1
+        },
+        "classification": {
+          "enum": [
+            "quick",
+            "smoke",
+            "standard"
+          ]
+        },
+        "comparison_level": {
+          "enum": [
+            "directional",
+            "not_comparable",
+            "standard"
+          ]
+        },
+        "workload": {
+          "type": "string",
+          "minLength": 1
+        },
+        "limitations": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "tool_result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "passed",
+        "attempts"
+      ],
+      "properties": {
+        "passed": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "attempts": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "run": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "observed_on",
+        "comparison_group",
+        "status",
+        "promotion",
+        "eligible_for_ranking",
+        "model",
+        "artifact",
+        "serving",
+        "validation",
+        "metrics",
+        "notes",
+        "provenance"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]+$"
+        },
+        "observed_on": {
+          "type": "string",
+          "format": "date"
+        },
+        "comparison_group": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "enum": [
+            "pass",
+            "partial",
+            "blocked"
+          ]
+        },
+        "promotion": {
+          "enum": [
+            "advance",
+            "control",
+            "reference",
+            "reject",
+            "blocked",
+            "historical"
+          ]
+        },
+        "eligible_for_ranking": {
+          "type": "boolean"
+        },
+        "model": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "display_name",
+            "family",
+            "architecture",
+            "total_parameters_b",
+            "active_parameters_b"
+          ],
+          "properties": {
+            "display_name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "family": {
+              "type": "string",
+              "minLength": 1
+            },
+            "architecture": {
+              "enum": [
+                "dense",
+                "moe",
+                "hybrid-moe",
+                "unknown"
+              ]
+            },
+            "total_parameters_b": {
+              "$ref": "#/$defs/nullable_number"
+            },
+            "active_parameters_b": {
+              "$ref": "#/$defs/nullable_number"
+            }
+          }
+        },
+        "artifact": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "publisher",
+            "model_id",
+            "revision",
+            "quantization",
+            "license",
+            "commercial_use"
+          ],
+          "properties": {
+            "publisher": {
+              "type": "string",
+              "minLength": 1
+            },
+            "model_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "revision": {
+              "$ref": "#/$defs/nullable_string"
+            },
+            "quantization": {
+              "type": "string",
+              "minLength": 1
+            },
+            "license": {
+              "type": "string",
+              "minLength": 1
+            },
+            "commercial_use": {
+              "enum": [
+                "allowed",
+                "not_allowed",
+                "not_recorded"
+              ]
+            }
+          }
+        },
+        "serving": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "engine",
+            "version",
+            "image",
+            "image_digest",
+            "profile",
+            "options",
+            "speculative"
+          ],
+          "properties": {
+            "engine": {
+              "type": "string",
+              "minLength": 1
+            },
+            "version": {
+              "type": "string",
+              "minLength": 1
+            },
+            "image": {
+              "type": "string",
+              "minLength": 1
+            },
+            "image_digest": {
+              "$ref": "#/$defs/nullable_string"
+            },
+            "profile": {
+              "type": "string",
+              "minLength": 1
+            },
+            "options": {
+              "type": "object",
+              "additionalProperties": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/serving_option_scalar"
+                  },
+                  {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/$defs/serving_option_scalar"
+                    }
+                  }
+                ]
+              }
+            },
+            "speculative": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "mode",
+                "draft_model",
+                "num_tokens",
+                "acceptance_pct"
+              ],
+              "properties": {
+                "mode": {
+                  "enum": [
+                    "off",
+                    "mtp",
+                    "external-draft"
+                  ]
+                },
+                "draft_model": {
+                  "$ref": "#/$defs/nullable_string"
+                },
+                "num_tokens": {
+                  "$ref": "#/$defs/nullable_integer"
+                },
+                "acceptance_pct": {
+                  "$ref": "#/$defs/nullable_number"
+                }
+              }
+            }
+          }
+        },
+        "validation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "api",
+            "chat",
+            "tool_simple",
+            "tool_nested",
+            "tool_large_surface",
+            "answer_quality"
+          ],
+          "properties": {
+            "api": {
+              "enum": [
+                "pass",
+                "fail",
+                "not_run"
+              ]
+            },
+            "chat": {
+              "enum": [
+                "pass",
+                "fail",
+                "not_run"
+              ]
+            },
+            "tool_simple": {
+              "$ref": "#/$defs/tool_result"
+            },
+            "tool_nested": {
+              "$ref": "#/$defs/tool_result"
+            },
+            "tool_large_surface": {
+              "$ref": "#/$defs/tool_result"
+            },
+            "answer_quality": {
+              "enum": [
+                "pass",
+                "fail",
+                "provisional",
+                "not_run"
+              ]
+            }
+          }
+        },
+        "metrics": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "ttft_p50_ms",
+            "ttft_p95_ms",
+            "tpot_p50_ms",
+            "e2e_p50_s",
+            "single_user_decode_tps_p50",
+            "aggregate_output_tps",
+            "concurrency",
+            "request_throughput_rps",
+            "accelerator_process_memory_mib",
+            "host_available_memory_gib"
+          ],
+          "properties": {
+            "ttft_p50_ms": {
+              "$ref": "#/$defs/nullable_number"
+            },
+            "ttft_p95_ms": {
+              "$ref": "#/$defs/nullable_number"
+            },
+            "tpot_p50_ms": {
+              "$ref": "#/$defs/nullable_number"
+            },
+            "e2e_p50_s": {
+              "$ref": "#/$defs/nullable_number"
+            },
+            "single_user_decode_tps_p50": {
+              "$ref": "#/$defs/nullable_number"
+            },
+            "aggregate_output_tps": {
+              "$ref": "#/$defs/nullable_number"
+            },
+            "concurrency": {
+              "$ref": "#/$defs/nullable_integer"
+            },
+            "request_throughput_rps": {
+              "$ref": "#/$defs/nullable_number"
+            },
+            "accelerator_process_memory_mib": {
+              "$ref": "#/$defs/nullable_number"
+            },
+            "host_available_memory_gib": {
+              "$ref": "#/$defs/nullable_number"
+            }
+          }
+        },
+        "notes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "provenance": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "measurement_scope"
+          ],
+          "properties": {
+            "measurement_scope": {
+              "type": "string",
+              "minLength": 1
+            },
+            "result_sha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "source_record_sha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            }
+          },
+          "anyOf": [
+            {
+              "required": [
+                "result_sha256"
+              ]
+            },
+            {
+              "required": [
+                "source_record_sha256"
+              ]
+            }
+          ]
+        }
+      }
+    }
+  }
+}

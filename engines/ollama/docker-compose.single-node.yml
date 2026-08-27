@@ -1,0 +1,25 @@
+name: llm-inference-lab-ollama
+
+services:
+  ollama-gemma4-26b-q4-k-m:
+    image: ${OLLAMA_IMAGE:-ollama/ollama:latest}
+    container_name: ${OLLAMA_GEMMA4_CONTAINER_NAME:-ollama-gemma4-26b-q4-k-m}
+    profiles: ["gemma4-q4-k-m"]
+    network_mode: host
+    gpus: all
+    volumes:
+      - ${OLLAMA_MODELS:?set OLLAMA_MODELS to the host .ollama directory}:/root/.ollama
+    environment:
+      OLLAMA_HOST: ${OLLAMA_HOST:-127.0.0.1:11434}
+      OLLAMA_CONTEXT_LENGTH: ${OLLAMA_CONTEXT_LENGTH:-32768}
+      OLLAMA_NUM_PARALLEL: ${OLLAMA_NUM_PARALLEL:-2}
+      OLLAMA_MAX_LOADED_MODELS: ${OLLAMA_MAX_LOADED_MODELS:-1}
+      OLLAMA_KEEP_ALIVE: ${OLLAMA_KEEP_ALIVE:-30m}
+      OLLAMA_FLASH_ATTENTION: ${OLLAMA_FLASH_ATTENTION:-true}
+    command: ["serve"]
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s

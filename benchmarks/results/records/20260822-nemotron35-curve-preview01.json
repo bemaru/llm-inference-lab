@@ -1,0 +1,31 @@
+{
+  "id": "20260822-nemotron35-curve-preview01",
+  "comparison_group": "dgx-spark-characterization-preview-2026-08",
+  "status": "pass",
+  "promotion": "reference",
+  "eligible_for_ranking": false,
+  "model": {
+    "display_name": "Nemotron 3.5 Lightning 30B-A3B NVFP4 · vLLM DSpark",
+    "family": "Nemotron 3.5 Lightning",
+    "architecture": "moe",
+    "total_parameters_b": 30,
+    "active_parameters_b": 3
+  },
+  "artifact": {
+    "publisher": "NVIDIA",
+    "license": "OpenMDW License Agreement 1.1",
+    "commercial_use": "model-card-declared"
+  },
+  "answer_quality": "not_run",
+  "notes": [
+    "Seven fixed-concurrency points from 1 to 32 completed 272/272 requests without errors.",
+    "Concurrency 2 produced the highest observed system throughput at 113.351663 output tok/s with TTFT p95 2.55526s.",
+    "This is a one-repetition, 60-second-per-point characterization preview and is not eligible for standard ranking.",
+    "Korean answer quality remains unevaluated."
+  ],
+  "provenance": {
+    "result_sha256": "3c2dc83442c17e81dbaf4b1a513414afa0d7b5ce414e15516c18e253baeba0bc",
+    "measurement_scope": "DGX Spark localhost vLLM NVFP4 DSpark characterization preview with seven fixed-concurrency operating points",
+    "source_record_sha256": "8faf79ec5eb0c50b0c6bf74fb125e12e1ce01e362c4c05ead3dec4adeb0c72aa"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "schema_version": "mlflow-import/v1",
+  "experiment": "llm-inference-lab",
+  "run_name": "normalized-results-example",
+  "source_artifact": "benchmarks/results/dgx-spark.json",
+  "params": {"evidence.type": "normalized-run-set"},
+  "metrics": {},
+  "tags": {"purpose": "local-publisher-example"}
+}

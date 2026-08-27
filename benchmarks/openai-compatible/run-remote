@@ -1,0 +1,95 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+usage() {
+  cat <<'EOF'
+Usage: run-remote --output FILE [--metadata-file FILE] --host SSH_ALIAS -- QUICK_CHECK_ARGS...
+
+Runs quick_check.py on the remote host and atomically retains its JSON stdout on
+the local machine. The remote benchmark receives metadata through an encoded
+environment variable; credentials are not written to the result.
+EOF
+}
+
+host="${SSH_TARGET:-}"
+metadata_file=""
+output_file=""
+
+while (( $# )); do
+  case "$1" in
+    --host)
+      host="${2:?missing value for --host}"
+      shift 2
+      ;;
+    --metadata-file)
+      metadata_file="${2:?missing value for --metadata-file}"
+      shift 2
+      ;;
+    --output)
+      output_file="${2:?missing value for --output}"
+      shift 2
+      ;;
+    --)
+      shift
+      break
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "Unknown wrapper option: $1" >&2
+      usage >&2
+      exit 2
+      ;;
+  esac
+done
+
+if [[ -z "$host" || -z "$output_file" || $# -eq 0 ]]; then
+  usage >&2
+  exit 2
+fi
+if [[ -n "$metadata_file" && ! -f "$metadata_file" ]]; then
+  echo "Metadata file does not exist: $metadata_file" >&2
+  exit 2
+fi
+
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+quick_check="$script_dir/quick_check.py"
+output_dir="$(dirname -- "$output_file")"
+mkdir -p "$output_dir"
+temporary_output="$(mktemp "$output_dir/.quick-result.XXXXXX.tmp")"
+
+cleanup() {
+  rm -f -- "$temporary_output"
+}
+trap cleanup EXIT
+
+remote_command="python3 -"
+if [[ -n "$metadata_file" ]]; then
+  metadata_b64="$(base64 -w0 -- "$metadata_file")"
+  printf -v remote_command 'env %q=%q python3 -' "LLM_BENCHMARK_METADATA_B64" "$metadata_b64"
+fi
+for argument in "$@"; do
+  printf -v quoted_argument ' %q' "$argument"
+  remote_command+="$quoted_argument"
+done
+
+set +e
+ssh "$host" "$remote_command" < "$quick_check" > "$temporary_output"
+benchmark_status=$?
+set -e
+
+if ! python3 -m json.tool "$temporary_output" >/dev/null; then
+  invalid_output="${output_file}.invalid"
+  mv -- "$temporary_output" "$invalid_output"
+  trap - EXIT
+  echo "Remote output was not valid JSON; retained at $invalid_output" >&2
+  exit 2
+fi
+
+mv -- "$temporary_output" "$output_file"
+trap - EXIT
+echo "Wrote $output_file"
+exit "$benchmark_status"

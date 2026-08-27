@@ -1,0 +1,479 @@
+services:
+  vllm-qwen36-35b-a3b-nvfp4:
+    image: ${QWEN36_NVFP4_VLLM_IMAGE:-vllm/vllm-openai:v0.24.0-ubuntu2404}
+    container_name: ${QWEN36_NVFP4_CONTAINER_NAME:-vllm-qwen36-35b-a3b-nvfp4-baseline}
+    profiles: ["qwen36-nvfp4"]
+    network_mode: host
+    ipc: host
+    shm_size: 16g
+    gpus: all
+    volumes:
+      - ${HF_CACHE:?set HF_CACHE to the host Hugging Face cache path}:/root/.cache/huggingface
+    environment:
+      - HF_TOKEN
+      - QWEN36_NVFP4_PORT=${QWEN36_NVFP4_PORT:-8000}
+    command:
+      - ${QWEN36_NVFP4_MODEL:-nvidia/Qwen3.6-35B-A3B-NVFP4}
+      - --served-model-name
+      - ${QWEN36_NVFP4_SERVED_MODEL_NAME:-qwen3.6-35b-a3b-nvfp4}
+      - --host
+      - 0.0.0.0
+      - --port
+      - ${QWEN36_NVFP4_PORT:-8000}
+      - --tensor-parallel-size
+      - "1"
+      - --trust-remote-code
+      - --kv-cache-dtype
+      - fp8
+      - --attention-backend
+      - flashinfer
+      - --moe-backend
+      - marlin
+      - --gpu-memory-utilization
+      - ${QWEN36_NVFP4_GPU_MEMORY_UTILIZATION:-0.40}
+      - --max-model-len
+      - ${QWEN36_NVFP4_MAX_MODEL_LEN:-32768}
+      - --max-num-seqs
+      - ${QWEN36_NVFP4_MAX_NUM_SEQS:-2}
+      - --max-num-batched-tokens
+      - ${QWEN36_NVFP4_MAX_NUM_BATCHED_TOKENS:-8192}
+      - --enable-chunked-prefill
+      - --async-scheduling
+      - --enable-prefix-caching
+      - --load-format
+      - fastsafetensors
+      - --reasoning-parser
+      - qwen3
+      - --tool-call-parser
+      - ${QWEN36_NVFP4_TOOL_CALL_PARSER:-qwen3_xml}
+      - --enable-auto-tool-choice
+      - --default-chat-template-kwargs
+      - '{"enable_thinking":false}'
+    healthcheck:
+      test:
+        - CMD
+        - python3
+        - -c
+        - "import os, sys, urllib.request; port=os.getenv('QWEN36_NVFP4_PORT','8000'); sys.exit(0 if urllib.request.urlopen(f'http://127.0.0.1:{port}/health', timeout=5).status == 200 else 1)"
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 900s
+
+  vllm-qwen36-35b-a3b-nvfp4-mtp:
+    image: ${QWEN36_NVFP4_VLLM_IMAGE:-vllm/vllm-openai:v0.24.0-ubuntu2404}
+    container_name: ${QWEN36_NVFP4_MTP_CONTAINER_NAME:-vllm-qwen36-35b-a3b-nvfp4-mtp}
+    profiles: ["qwen36-nvfp4-mtp"]
+    network_mode: host
+    ipc: host
+    shm_size: 16g
+    gpus: all
+    volumes:
+      - ${HF_CACHE:?set HF_CACHE to the host Hugging Face cache path}:/root/.cache/huggingface
+    environment:
+      - HF_TOKEN
+      - QWEN36_NVFP4_MTP_PORT=${QWEN36_NVFP4_MTP_PORT:-8000}
+    command:
+      - ${QWEN36_NVFP4_MODEL:-nvidia/Qwen3.6-35B-A3B-NVFP4}
+      - --served-model-name
+      - ${QWEN36_NVFP4_SERVED_MODEL_NAME:-qwen3.6-35b-a3b-nvfp4}
+      - --host
+      - 0.0.0.0
+      - --port
+      - ${QWEN36_NVFP4_MTP_PORT:-8000}
+      - --tensor-parallel-size
+      - "1"
+      - --trust-remote-code
+      - --kv-cache-dtype
+      - fp8
+      - --attention-backend
+      - flashinfer
+      - --moe-backend
+      - marlin
+      - --gpu-memory-utilization
+      - ${QWEN36_NVFP4_GPU_MEMORY_UTILIZATION:-0.40}
+      - --max-model-len
+      - ${QWEN36_NVFP4_MAX_MODEL_LEN:-32768}
+      - --max-num-seqs
+      - ${QWEN36_NVFP4_MAX_NUM_SEQS:-2}
+      - --max-num-batched-tokens
+      - ${QWEN36_NVFP4_MAX_NUM_BATCHED_TOKENS:-8192}
+      - --enable-chunked-prefill
+      - --async-scheduling
+      - --enable-prefix-caching
+      - --speculative-config
+      - '{"method":"mtp","num_speculative_tokens":3,"moe_backend":"triton"}'
+      - --load-format
+      - fastsafetensors
+      - --reasoning-parser
+      - qwen3
+      - --tool-call-parser
+      - ${QWEN36_NVFP4_TOOL_CALL_PARSER:-qwen3_xml}
+      - --enable-auto-tool-choice
+      - --default-chat-template-kwargs
+      - '{"enable_thinking":false}'
+    healthcheck:
+      test:
+        - CMD
+        - python3
+        - -c
+        - "import os, sys, urllib.request; port=os.getenv('QWEN36_NVFP4_MTP_PORT','8000'); sys.exit(0 if urllib.request.urlopen(f'http://127.0.0.1:{port}/health', timeout=5).status == 200 else 1)"
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 900s
+
+  vllm-gemma4-26b-a4b-nvfp4-candidate:
+    image: ${GEMMA4_NVFP4_VLLM_IMAGE:-vllm/vllm-openai@sha256:3dbe092ec5b2cef63b6104d33fa75d6ce53a7870962529ada69f78bbbc38e776}
+    container_name: ${GEMMA4_NVFP4_CONTAINER_NAME:-vllm-gemma4-26b-a4b-nvfp4-candidate}
+    profiles: ["gemma4-nvfp4-candidate"]
+    network_mode: host
+    ipc: host
+    shm_size: 16g
+    gpus: all
+    ulimits:
+      memlock: -1
+      stack: 67108864
+    volumes:
+      - ${HF_CACHE:?set HF_CACHE to the host Hugging Face cache path}:/root/.cache/huggingface:ro
+    environment:
+      - HF_HUB_OFFLINE=1
+      - TRANSFORMERS_OFFLINE=1
+      - GEMMA4_NVFP4_HOST=${GEMMA4_NVFP4_HOST:-127.0.0.1}
+      - GEMMA4_NVFP4_PORT=${GEMMA4_NVFP4_PORT:-8000}
+    command:
+      - ${GEMMA4_NVFP4_MODEL:-nvidia/Gemma-4-26B-A4B-NVFP4}
+      - --revision
+      - ${GEMMA4_NVFP4_REVISION:-a19cfe00be84568a6867111c9a68c9c44fdcffe6}
+      - --served-model-name
+      - ${GEMMA4_NVFP4_SERVED_MODEL_NAME:-gemma-4-26b-a4b-nvfp4}
+      - --host
+      - ${GEMMA4_NVFP4_HOST:-127.0.0.1}
+      - --port
+      - ${GEMMA4_NVFP4_PORT:-8000}
+      - --tensor-parallel-size
+      - "1"
+      - --trust-remote-code
+      - --kv-cache-dtype
+      - auto
+      - --moe-backend
+      - marlin
+      - --gpu-memory-utilization
+      - ${GEMMA4_NVFP4_GPU_MEMORY_UTILIZATION:-0.40}
+      - --max-model-len
+      - ${GEMMA4_NVFP4_MAX_MODEL_LEN:-32768}
+      - --max-num-seqs
+      - ${GEMMA4_NVFP4_MAX_NUM_SEQS:-4}
+      - --max-num-batched-tokens
+      - ${GEMMA4_NVFP4_MAX_NUM_BATCHED_TOKENS:-8192}
+      - --enable-chunked-prefill
+      - --enable-prefix-caching
+      - --reasoning-parser
+      - gemma4
+      - --tool-call-parser
+      - gemma4
+      - --enable-auto-tool-choice
+    healthcheck:
+      test:
+        - CMD
+        - python3
+        - -c
+        - "import os, sys, urllib.request; host=os.getenv('GEMMA4_NVFP4_HOST','127.0.0.1'); port=os.getenv('GEMMA4_NVFP4_PORT','8000'); sys.exit(0 if urllib.request.urlopen(f'http://{host}:{port}/health', timeout=5).status == 200 else 1)"
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 900s
+
+  vllm-qwen38-27b-fp8-candidate:
+    image: ${CANDIDATE_VLLM_IMAGE:-vllm/vllm-openai:v0.27.1-ubuntu2404}
+    container_name: ${QWEN38_FP8_CONTAINER_NAME:-vllm-qwen38-27b-fp8-candidate}
+    profiles: ["qwen38-fp8-candidate"]
+    network_mode: host
+    ipc: host
+    shm_size: 16g
+    gpus: all
+    volumes:
+      - ${HF_CACHE:?set HF_CACHE to the host Hugging Face cache path}:/root/.cache/huggingface
+    environment:
+      - HF_TOKEN
+      - CANDIDATE_PORT=${CANDIDATE_PORT:-8000}
+    command:
+      - ${QWEN38_FP8_MODEL:-Qwen/Qwen3.8-27B-FP8}
+      - --served-model-name
+      - ${QWEN38_FP8_SERVED_MODEL_NAME:-qwen3.8-27b-fp8}
+      - --host
+      - 0.0.0.0
+      - --port
+      - ${CANDIDATE_PORT:-8000}
+      - --tensor-parallel-size
+      - "1"
+      - --trust-remote-code
+      - --language-model-only
+      - --kv-cache-dtype
+      - fp8
+      - --gpu-memory-utilization
+      - ${CANDIDATE_GPU_MEMORY_UTILIZATION:-0.40}
+      - --max-model-len
+      - ${CANDIDATE_MAX_MODEL_LEN:-32768}
+      - --max-num-seqs
+      - ${CANDIDATE_MAX_NUM_SEQS:-2}
+      - --max-num-batched-tokens
+      - ${CANDIDATE_MAX_NUM_BATCHED_TOKENS:-8192}
+      - --enable-chunked-prefill
+      - --async-scheduling
+      - --enable-prefix-caching
+      - --speculative-config
+      - '{"method":"mtp","num_speculative_tokens":3}'
+      - --load-format
+      - fastsafetensors
+      - --reasoning-parser
+      - qwen3
+      - --tool-call-parser
+      - qwen3_coder
+      - --enable-auto-tool-choice
+      - --default-chat-template-kwargs
+      - '{"enable_thinking":false}'
+    healthcheck:
+      test:
+        - CMD
+        - python3
+        - -c
+        - "import os, sys, urllib.request; port=os.getenv('CANDIDATE_PORT','8000'); sys.exit(0 if urllib.request.urlopen(f'http://127.0.0.1:{port}/health', timeout=5).status == 200 else 1)"
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 900s
+
+  vllm-exaone45-33b-awq-candidate:
+    image: ${CANDIDATE_VLLM_IMAGE:-vllm/vllm-openai:v0.27.1-ubuntu2404}
+    container_name: ${EXAONE45_AWQ_CONTAINER_NAME:-vllm-exaone45-33b-awq-candidate}
+    profiles: ["exaone45-awq-candidate"]
+    network_mode: host
+    ipc: host
+    shm_size: 16g
+    gpus: all
+    volumes:
+      - ${HF_CACHE:?set HF_CACHE to the host Hugging Face cache path}:/root/.cache/huggingface
+    environment:
+      - HF_TOKEN
+      - CANDIDATE_PORT=${CANDIDATE_PORT:-8000}
+    command:
+      - ${EXAONE45_AWQ_MODEL:-LGAI-EXAONE/EXAONE-4.5-33B-AWQ}
+      - --served-model-name
+      - ${EXAONE45_AWQ_SERVED_MODEL_NAME:-exaone-4.5-33b-awq}
+      - --host
+      - 0.0.0.0
+      - --port
+      - ${CANDIDATE_PORT:-8000}
+      - --tensor-parallel-size
+      - "1"
+      - --trust-remote-code
+      - --language-model-only
+      - --kv-cache-dtype
+      - fp8
+      - --gpu-memory-utilization
+      - ${CANDIDATE_GPU_MEMORY_UTILIZATION:-0.40}
+      - --max-model-len
+      - ${CANDIDATE_MAX_MODEL_LEN:-32768}
+      - --max-num-seqs
+      - ${CANDIDATE_MAX_NUM_SEQS:-2}
+      - --max-num-batched-tokens
+      - ${CANDIDATE_MAX_NUM_BATCHED_TOKENS:-8192}
+      - --enable-chunked-prefill
+      - --async-scheduling
+      - --enable-prefix-caching
+      - --load-format
+      - fastsafetensors
+      - --reasoning-parser
+      - qwen3
+      - --tool-call-parser
+      - hermes
+      - --enable-auto-tool-choice
+      - --default-chat-template-kwargs
+      - '{"enable_thinking":false}'
+    healthcheck:
+      test:
+        - CMD
+        - python3
+        - -c
+        - "import os, sys, urllib.request; port=os.getenv('CANDIDATE_PORT','8000'); sys.exit(0 if urllib.request.urlopen(f'http://127.0.0.1:{port}/health', timeout=5).status == 200 else 1)"
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 900s
+
+  vllm-nemotron35-lightning-nvfp4-candidate:
+    image: ${CANDIDATE_VLLM_IMAGE:-vllm/vllm-openai:v0.27.1-ubuntu2404}
+    container_name: ${NEMOTRON35_NVFP4_CONTAINER_NAME:-vllm-nemotron35-lightning-nvfp4-candidate}
+    profiles: ["nemotron35-nvfp4-candidate"]
+    network_mode: host
+    ipc: host
+    shm_size: 16g
+    gpus: all
+    volumes:
+      - ${HF_CACHE:?set HF_CACHE to the host Hugging Face cache path}:/root/.cache/huggingface
+    environment:
+      - HF_TOKEN
+      - CANDIDATE_PORT=${CANDIDATE_PORT:-8000}
+    command:
+      - ${NEMOTRON35_NVFP4_MODEL:-nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4}
+      - --served-model-name
+      - ${NEMOTRON35_NVFP4_SERVED_MODEL_NAME:-nemotron-3.5-lightning-30b-a3b-nvfp4}
+      - --host
+      - 0.0.0.0
+      - --port
+      - ${CANDIDATE_PORT:-8000}
+      - --tensor-parallel-size
+      - "1"
+      - --trust-remote-code
+      - --kv-cache-dtype
+      - fp8
+      - --moe-backend
+      - marlin
+      - --gpu-memory-utilization
+      - ${CANDIDATE_GPU_MEMORY_UTILIZATION:-0.40}
+      - --max-model-len
+      - ${CANDIDATE_MAX_MODEL_LEN:-32768}
+      - --max-num-seqs
+      - ${CANDIDATE_MAX_NUM_SEQS:-2}
+      - --max-num-batched-tokens
+      - ${CANDIDATE_MAX_NUM_BATCHED_TOKENS:-8192}
+      - --enable-chunked-prefill
+      - --enable-prefix-caching
+      - --mamba-backend
+      - flashinfer
+      - --mamba-cache-mode
+      - align
+      - --speculative-config
+      - '{"model":"${NEMOTRON35_DSPARK_MODEL:-nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4-DSpark}","num_speculative_tokens":3}'
+      - --reasoning-parser
+      - nemotron_v3
+      - --tool-call-parser
+      - qwen3_coder
+      - --enable-auto-tool-choice
+    healthcheck:
+      test:
+        - CMD
+        - python3
+        - -c
+        - "import os, sys, urllib.request; port=os.getenv('CANDIDATE_PORT','8000'); sys.exit(0 if urllib.request.urlopen(f'http://127.0.0.1:{port}/health', timeout=5).status == 200 else 1)"
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 900s
+
+  vllm-qwen-fp8:
+    image: ${QWEN_VLLM_IMAGE:-vllm/vllm-openai:v0.20.0}
+    container_name: ${QWEN_VLLM_CONTAINER_NAME:-vllm-qwen-fp8}
+    profiles: ["qwen-fp8"]
+    network_mode: host
+    ipc: host
+    shm_size: 16g
+    gpus: all
+    volumes:
+      - ${HF_CACHE:?set HF_CACHE to the host Hugging Face cache path}:/root/.cache/huggingface
+    environment:
+      - HF_TOKEN
+      - QWEN_PORT=${QWEN_PORT:-8010}
+    command:
+      - --model
+      - ${QWEN_MODEL:-Qwen/Qwen3.6-27B-FP8}
+      - --host
+      - 0.0.0.0
+      - --port
+      - ${QWEN_PORT:-8010}
+      - --max-model-len
+      - ${QWEN_MAX_MODEL_LEN:-131072}
+      - --gpu-memory-utilization
+      - ${QWEN_GPU_MEMORY_UTILIZATION:-0.80}
+      - --reasoning-parser
+      - qwen3
+      - --language-model-only
+      - --enable-prefix-caching
+    healthcheck:
+      test:
+        - CMD
+        - python3
+        - -c
+        - "import os, sys, urllib.request; port=os.getenv('QWEN_PORT','8010'); sys.exit(0 if urllib.request.urlopen(f'http://127.0.0.1:{port}/v1/models', timeout=5).status == 200 else 1)"
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 180s
+
+  vllm-gemma4-26b-bf16:
+    image: ${GEMMA26_VLLM_IMAGE:-vllm/vllm-openai:gemma4-cu130}
+    container_name: ${GEMMA26_VLLM_CONTAINER_NAME:-vllm-gemma4-26b-bf16}
+    profiles: ["gemma4-26b-bf16"]
+    network_mode: host
+    ipc: host
+    shm_size: 16g
+    gpus: all
+    volumes:
+      - ${HF_CACHE:?set HF_CACHE to the host Hugging Face cache path}:/root/.cache/huggingface
+    environment:
+      - HF_TOKEN
+      - GEMMA26_PORT=${GEMMA26_PORT:-8011}
+    command:
+      - --model
+      - ${GEMMA26_MODEL:-google/gemma-4-26B-A4B-it}
+      - --host
+      - 0.0.0.0
+      - --port
+      - ${GEMMA26_PORT:-8011}
+      - --max-model-len
+      - ${GEMMA26_MAX_MODEL_LEN:-2048}
+      - --max-num-seqs
+      - ${GEMMA26_MAX_NUM_SEQS:-1}
+      - --gpu-memory-utilization
+      - ${GEMMA26_GPU_MEMORY_UTILIZATION:-0.60}
+      - --enforce-eager
+      - --limit-mm-per-prompt
+      - '{"image":0,"audio":0}'
+    healthcheck:
+      test:
+        - CMD
+        - python3
+        - -c
+        - "import os, sys, urllib.request; port=os.getenv('GEMMA26_PORT','8011'); sys.exit(0 if urllib.request.urlopen(f'http://127.0.0.1:{port}/v1/models', timeout=5).status == 200 else 1)"
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 180s
+
+  vllm-gemma4-e4b:
+    image: ${GEMMA_VLLM_IMAGE:-vllm/vllm-openai:gemma4-cu130}
+    container_name: ${GEMMA_VLLM_CONTAINER_NAME:-vllm-gemma4-e4b}
+    profiles: ["gemma4-e4b"]
+    network_mode: host
+    ipc: host
+    shm_size: 16g
+    gpus: all
+    volumes:
+      - ${HF_CACHE:?set HF_CACHE to the host Hugging Face cache path}:/root/.cache/huggingface
+    environment:
+      - HF_TOKEN
+      - GEMMA_PORT=${GEMMA_PORT:-8012}
+    command:
+      - --model
+      - ${GEMMA_MODEL:-google/gemma-4-E4B-it}
+      - --host
+      - 0.0.0.0
+      - --port
+      - ${GEMMA_PORT:-8012}
+      - --max-model-len
+      - ${GEMMA_MAX_MODEL_LEN:-4096}
+      - --gpu-memory-utilization
+      - ${GEMMA_GPU_MEMORY_UTILIZATION:-0.45}
+      - --limit-mm-per-prompt
+      - '{"image":0,"audio":0}'
+    healthcheck:
+      test:
+        - CMD
+        - python3
+        - -c
+        - "import os, sys, urllib.request; port=os.getenv('GEMMA_PORT','8012'); sys.exit(0 if urllib.request.urlopen(f'http://127.0.0.1:{port}/v1/models', timeout=5).status == 200 else 1)"
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 180s

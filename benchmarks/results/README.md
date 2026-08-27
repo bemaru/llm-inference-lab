@@ -1,0 +1,59 @@
+# Normalized Results
+
+Sanitized, machine-readable benchmark summaries used to generate repository
+leaderboards. Raw request records, prompts, responses, credentials, endpoint
+addresses and large profiler artifacts stay outside Git.
+
+## Contract
+
+- [`run-set.schema.json`](run-set.schema.json) defines the versioned result-set
+  envelope.
+- [`dgx-spark.json`](dgx-spark.json) contains the currently normalized DGX
+  Spark results with source evidence hashes.
+- A serving-variable change such as model revision, quantization, runtime
+  version or speculative-decoding mode creates a distinct run entry.
+- `eligible_for_ranking` is a presentation gate, not a deployment approval.
+- `comparison_group` prevents unlike smoke, quick and standard workloads from
+  being ranked as if they were equivalent.
+
+The per-execution source is the JSON emitted under the ignored `artifacts/`
+directory by `benchmarks/openai-compatible/quick_check.py`; raw response JSON
+remains there. The `benchmarks/results/` directory contains only reviewed,
+sanitized projections.
+
+Normalize a retained Quick result with a reviewable record descriptor, then
+rebuild the static projection:
+
+```bash
+python3 benchmarks/results/import_quick.py \
+  --result artifacts/quick/<run-id>/result.json \
+  --record benchmarks/results/records/<run-id>.json
+python3 leaderboards/build.py
+python3 leaderboards/build.py --check
+```
+
+The importer derives measured fields from the canonical result, computes its
+SHA-256, and upserts one run by ID. The record descriptor contains only catalog
+and review policy fields such as display name, ranking eligibility, notes, and
+measurement scope. Imported results retain the raw artifact SHA-256, not its
+local path. Review all metadata and notes before committing the projection.
+
+Historical entries may also retain a `source_record_sha256` identifying an
+unpublished execution record. A hash preserves identity, not access to the raw
+evidence. Retained `license` and `commercial_use` fields are historical notes,
+not a current rights determination; check upstream terms before use.
+
+The Nemotron characterization-preview descriptor is retained separately from
+the Quick run set. `import_quick.py` accepts Quick results only; that preview
+does not participate in the Quick leaderboard.
+
+Validate and rebuild the current leaderboard from the repository root:
+
+```bash
+python3 leaderboards/build.py
+python3 leaderboards/build.py --check
+```
+
+The schema intentionally does not depend on MLflow or another experiment
+backend. A future publisher can send the same records to an external registry
+without changing the retained repository evidence.

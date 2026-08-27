@@ -1,0 +1,63 @@
+{
+  "hardware": {
+    "system": "NVIDIA DGX Spark",
+    "accelerator": "NVIDIA GB10",
+    "accelerator_count": 1,
+    "memory_gib": 128
+  },
+  "model_artifact": {
+    "id": "nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4",
+    "revision": "e8f3c7c4de75ad84fe1bcef95d38eca76214480b",
+    "quantization": "ModelOpt NVFP4 target with NVFP4 DSpark draft",
+    "tokenizer_revision": "e8f3c7c4de75ad84fe1bcef95d38eca76214480b"
+  },
+  "serving": {
+    "engine": "vLLM",
+    "version": "0.27.1 (6e448d0ea9bf3d88d898b65449ca6dc2aec170ac)",
+    "image": "vllm/vllm-openai:v0.27.1-ubuntu2404",
+    "image_digest": "sha256:6a278041c910af1a6db0f3555aac30dbdf93d7acb01008656d99007cf7781a3a",
+    "command_profile": "engines/vllm/docker-compose.single-node.yml#vllm-nemotron35-lightning-nvfp4-candidate",
+    "options": {
+      "tensor_parallel_size": 1,
+      "context_length": 32768,
+      "max_num_seqs": 2,
+      "max_num_batched_tokens": 8192,
+      "gpu_memory_utilization": 0.4,
+      "kv_cache_dtype": "fp8",
+      "moe_backend": "marlin",
+      "mamba_backend": "flashinfer",
+      "mamba_cache_mode": "align",
+      "prefix_caching": true,
+      "chunked_prefill": true,
+      "reasoning_parser": "nemotron_v3",
+      "tool_call_parser": "qwen3_coder"
+    },
+    "speculative": {
+      "mode": "external-draft",
+      "draft_model": "nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4-DSpark",
+      "draft_revision": "d10c6ff40d6e69d1f92e407e027de3eafdb77645",
+      "settings": {
+        "algorithm": "DSpark",
+        "num_speculative_tokens": 3
+      }
+    }
+  },
+  "software": {
+    "os": "Ubuntu 24.04.4 LTS",
+    "kernel": "Linux 6.17.0-1014-nvidia aarch64 GNU/Linux",
+    "driver": "NVIDIA 580.142",
+    "container_runtime": "Docker 29.2.1"
+  },
+  "execution": {
+    "benchmark_host": "NVIDIA DGX Spark",
+    "network_path": "DGX Spark localhost",
+    "cpu_affinity": null
+  },
+  "provenance": {
+    "repository_revision": "0dc565967cd201293a63bb4d1cb180e9ec504644",
+    "worktree_dirty": true,
+    "notes": [
+      "Serving recipe and benchmark client are committed; unrelated local changes remain in the operator worktree."
+    ]
+  }
+}

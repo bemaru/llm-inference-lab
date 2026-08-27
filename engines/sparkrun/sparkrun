@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+exec uvx --python 3.12 --from 'sparkrun==0.3.5' sparkrun "$@"

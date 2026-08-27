@@ -1,0 +1,30 @@
+{
+  "id": "20260825-gemma4-26b-a4b-nvfp4-vllm-seq4-compiled-quick01",
+  "comparison_group": "dgx-spark-gemma4-sequential-quick-2026-08",
+  "status": "pass",
+  "promotion": "advance",
+  "eligible_for_ranking": true,
+  "model": {
+    "display_name": "Gemma4 26B-A4B NVFP4 · vLLM compiled",
+    "family": "Gemma4",
+    "architecture": "moe",
+    "total_parameters_b": 25.2,
+    "active_parameters_b": 3.8
+  },
+  "artifact": {
+    "publisher": "NVIDIA",
+    "license": "실행 기록에 미기재",
+    "commercial_use": "not_recorded"
+  },
+  "answer_quality": "not_run",
+  "notes": [
+    "eager seq4 기준에서 --enforce-eager만 제거해 vLLM compile과 CUDA Graphs를 활성화한 A/B 후보입니다.",
+    "두 Quick 실행에서 single-user decode p50이 24.476과 24.472 tok/s로 재현되어 eager 대비 12.8% 증가했습니다.",
+    "한국어 chat과 단순·중첩·32-tool 선택을 각각 3회 통과했습니다.",
+    "compiled 구성의 답변 품질은 별도로 평가해야 합니다."
+  ],
+  "provenance": {
+    "measurement_scope": "DGX Spark local bridge endpoint의 vLLM NVFP4 MTP-off seq4 compile/CUDA Graph canonical Quick run",
+    "source_record_sha256": "b4d80d914b3c2a502f390d13a3e643d98c5148a433bda26c2518e69d5e8a45d1"
+  }
+}

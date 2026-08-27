@@ -1,0 +1,149 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "openai-compatible-characterization-v1.json",
+  "title": "OpenAI-compatible endpoint characterization result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "run_id", "started_at", "completed_at", "elapsed_s",
+    "benchmark", "base_url", "model", "classification", "metadata_status",
+    "metadata", "quality_gate_ref", "workload", "request_settings",
+    "compliance", "curve", "point_runs", "requests", "passed"
+  ],
+  "properties": {
+    "schema_version": {"const": "openai-compatible-characterization/v1"},
+    "run_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"},
+    "started_at": {"type": "string", "format": "date-time"},
+    "completed_at": {"type": "string", "format": "date-time"},
+    "elapsed_s": {"type": "number", "minimum": 0},
+    "benchmark": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version", "implementation", "methodology_label"],
+      "properties": {
+        "name": {"const": "openai-compatible-endpoint-characterization"},
+        "version": {"type": "string", "minLength": 1},
+        "implementation": {"type": "string", "minLength": 1},
+        "methodology_label": {"const": "MLPerf Endpoints-derived / custom workload / unverified"}
+      }
+    },
+    "base_url": {"type": "string", "minLength": 1},
+    "model": {"type": "string", "minLength": 1},
+    "classification": {"enum": ["standard-characterization", "characterization-preview"]},
+    "metadata_status": {"enum": ["provided", "not_provided"]},
+    "metadata": {"type": ["object", "null"]},
+    "quality_gate_ref": {"type": ["string", "null"]},
+    "workload": {"type": "object"},
+    "request_settings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "concurrency_points", "duration_s", "repetitions", "warmup_requests",
+        "reasoning_effort", "chat_template_kwargs", "stream", "include_usage", "load_mode"
+      ],
+      "properties": {
+        "concurrency_points": {
+          "type": "array", "minItems": 1, "uniqueItems": true,
+          "items": {"type": "integer", "minimum": 1}
+        },
+        "duration_s": {"type": "number", "exclusiveMinimum": 0},
+        "repetitions": {"type": "integer", "minimum": 1},
+        "warmup_requests": {"type": "integer", "minimum": 0},
+        "reasoning_effort": {"type": ["string", "null"]},
+        "chat_template_kwargs": {"type": "boolean"},
+        "stream": {"const": true},
+        "include_usage": {"const": true},
+        "load_mode": {"const": "closed-loop-fixed-concurrency"}
+      }
+    },
+    "compliance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["preflight", "execution", "compliant"],
+      "properties": {
+        "preflight": {"type": "object", "additionalProperties": {"type": "boolean"}},
+        "execution": {"type": "object", "additionalProperties": {"type": "boolean"}},
+        "compliant": {"type": "boolean"}
+      }
+    },
+    "curve": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/curve_point"}},
+    "point_runs": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/point_run"}},
+    "requests": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/request"}},
+    "passed": {"type": "boolean"}
+  },
+  "$defs": {
+    "ci95": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["count", "mean", "lower", "upper", "method"],
+      "properties": {
+        "count": {"type": "integer", "minimum": 0},
+        "mean": {"type": ["number", "null"]},
+        "lower": {"type": ["number", "null"]},
+        "upper": {"type": ["number", "null"]},
+        "method": {"const": "student-t"}
+      }
+    },
+    "curve_point": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "concurrency", "repetitions", "system_output_tps_ci95",
+        "output_tps_per_user_ci95", "ttft_p95_s_ci95", "success_rate_ci95"
+      ],
+      "properties": {
+        "concurrency": {"type": "integer", "minimum": 1},
+        "repetitions": {"type": "integer", "minimum": 1},
+        "system_output_tps_ci95": {"$ref": "#/$defs/ci95"},
+        "output_tps_per_user_ci95": {"$ref": "#/$defs/ci95"},
+        "ttft_p95_s_ci95": {"$ref": "#/$defs/ci95"},
+        "success_rate_ci95": {"$ref": "#/$defs/ci95"}
+      }
+    },
+    "point_run": {
+      "type": "object",
+      "required": [
+        "repetition", "concurrency", "scheduled_duration_s", "measured_duration_s",
+        "summary", "resource_before", "resource_after"
+      ],
+      "properties": {
+        "repetition": {"type": "integer", "minimum": 1},
+        "concurrency": {"type": "integer", "minimum": 1},
+        "scheduled_duration_s": {"type": "number", "exclusiveMinimum": 0},
+        "measured_duration_s": {"type": "number", "exclusiveMinimum": 0},
+        "summary": {"type": "object"},
+        "resource_before": {"type": "object"},
+        "resource_after": {"type": "object"}
+      }
+    },
+    "request": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "request_id", "repetition", "concurrency", "worker", "sequence", "case_id",
+        "started_offset_s", "status", "e2e_s", "ttft_s", "tpot_ms", "input_tokens",
+        "output_tokens", "reasoning_tokens", "finish_reason", "content_chars", "error_type", "error"
+      ],
+      "properties": {
+        "request_id": {"type": "string", "minLength": 1},
+        "repetition": {"type": "integer", "minimum": 1},
+        "concurrency": {"type": "integer", "minimum": 1},
+        "worker": {"type": "integer", "minimum": 0},
+        "sequence": {"type": "integer", "minimum": 0},
+        "case_id": {"type": "string", "minLength": 1},
+        "started_offset_s": {"type": "number", "minimum": 0},
+        "status": {"enum": ["success", "error"]},
+        "e2e_s": {"type": ["number", "null"], "minimum": 0},
+        "ttft_s": {"type": ["number", "null"], "minimum": 0},
+        "tpot_ms": {"type": ["number", "null"], "minimum": 0},
+        "input_tokens": {"type": "integer", "minimum": 0},
+        "output_tokens": {"type": "integer", "minimum": 0},
+        "reasoning_tokens": {"type": "integer", "minimum": 0},
+        "finish_reason": {"type": ["string", "null"]},
+        "content_chars": {"type": "integer", "minimum": 0},
+        "error_type": {"type": ["string", "null"]},
+        "error": {"type": ["string", "null"]}
+      }
+    }
+  }
+}

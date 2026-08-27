@@ -1,0 +1,30 @@
+{
+  "id": "20260821-qwen38-nvfp4-sglang-dflash2-rerun01",
+  "comparison_group": "dgx-spark-quick-2026-08-21",
+  "status": "pass",
+  "promotion": "reference",
+  "eligible_for_ranking": false,
+  "model": {
+    "display_name": "Qwen3.8 27B NVFP4 · SGLang DFlash2",
+    "family": "Qwen3.8",
+    "architecture": "dense",
+    "total_parameters_b": 27,
+    "active_parameters_b": 27
+  },
+  "artifact": {
+    "publisher": "RadixArk",
+    "license": "실행 기록에 미기재",
+    "commercial_use": "not_recorded"
+  },
+  "answer_quality": "not_run",
+  "notes": [
+    "동일 조건 canonical 재측정에서 Tool Calling 18/18을 통과했습니다.",
+    "closed-loop는 네 요청 모두 stop으로 총 784 tokens를 생성해 aggregate throughput 순위에서 제외했습니다.",
+    "초기 요약의 66.755 decode tok/s는 재현되지 않았고 cache 8 진단도 48.260 tok/s였습니다.",
+    "custom image provenance와 성능 재현성 문제를 해소하기 전까지 참고 구성으로 유지합니다."
+  ],
+  "provenance": {
+    "measurement_scope": "DGX Spark localhost의 SGLang DFlash2 canonical Quick rerun",
+    "source_record_sha256": "5f1aeca2015ef3ba04ef809574073546a8148107357e15efd0da95197ea4fb68"
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "id": "20260821-qwen38-nvfp4-sglang-dspark-rerun01",
+  "comparison_group": "dgx-spark-quick-2026-08-21",
+  "status": "pass",
+  "promotion": "advance",
+  "eligible_for_ranking": false,
+  "model": {
+    "display_name": "Qwen3.8 27B NVFP4 · SGLang DSpark",
+    "family": "Qwen3.8",
+    "architecture": "dense",
+    "total_parameters_b": 27,
+    "active_parameters_b": 27
+  },
+  "artifact": {
+    "publisher": "RadixArk",
+    "license": "실행 기록에 미기재",
+    "commercial_use": "not_recorded"
+  },
+  "answer_quality": "not_run",
+  "notes": [
+    "동일 조건 canonical 재측정에서 Tool Calling 18/18을 통과했습니다.",
+    "closed-loop는 총 922 tokens와 2 stop, 2 length 종료이므로 aggregate throughput 순위에서 제외했습니다.",
+    "세 SGLang 구성 중 재현된 single-user decode TPS가 가장 높아 다음 characterization 후보로 유지합니다."
+  ],
+  "provenance": {
+    "measurement_scope": "DGX Spark localhost의 SGLang DSpark canonical Quick rerun",
+    "source_record_sha256": "5f1aeca2015ef3ba04ef809574073546a8148107357e15efd0da95197ea4fb68"
+  }
+}
