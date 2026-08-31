@@ -45,6 +45,30 @@ class PublicationPayload:
     measurement_metrics: Mapping[str, float]
 
 
+@dataclass(frozen=True)
+class StoredRun:
+    run_id: str
+    status: str
+    params: Mapping[str, str]
+    tags: Mapping[str, str]
+    metrics: Mapping[str, float]
+
+
+@dataclass(frozen=True)
+class RelationshipResult:
+    status: str
+    profile_state: str | None
+    recipe_id: str | None
+
+    @property
+    def exportable(self) -> bool:
+        return self.status in {
+            "linked",
+            "historical-profile-drift",
+            "profile-unavailable",
+        }
+
+
 def require_sha256(value: str, name: str) -> str:
     if len(value) != 64 or any(character not in "0123456789abcdef" for character in value):
         raise ValueError(f"{name} must be a lowercase SHA-256 digest")
@@ -256,3 +280,208 @@ def publication_payload(inputs: PublicationInputs) -> PublicationPayload:
         measurement_tags=measurement_tags,
         measurement_metrics=measurement_metrics,
     )
+
+
+def stored_value(run: StoredRun, key: str) -> str | None:
+    value = run.tags.get(key)
+    if value is None:
+        value = run.params.get(key)
+    if value is None or value == "null":
+        return None
+    return str(value)
+
+
+def _relationship_conflicts(recipe: StoredRun, measurement: StoredRun) -> bool:
+    recipe_id = stored_value(recipe, "recipe.id")
+    measurement_recipe_id = stored_value(measurement, "recipe.id")
+    if recipe_id is None or recipe_id != measurement_recipe_id:
+        return True
+    profile_sha256 = stored_value(recipe, "recipe.profile_sha256")
+    try:
+        if profile_sha256 is None or require_sha256(
+            profile_sha256, "recipe.profile_sha256"
+        ) != recipe_id.removeprefix("sha256:"):
+            return True
+    except ValueError:
+        return True
+    for key in ("model.id", "serving.engine"):
+        recipe_value = stored_value(recipe, key)
+        measurement_value = stored_value(measurement, key)
+        if recipe_value is None or measurement_value is None:
+            return True
+        if key == "serving.engine":
+            if recipe_value.strip().lower() != measurement_value.strip().lower():
+                return True
+        elif recipe_value != measurement_value:
+            return True
+    return False
+
+
+def classify_relationship(
+    recipe: StoredRun, measurement: StoredRun, repository_root: Path
+) -> RelationshipResult:
+    recipe_id = stored_value(recipe, "recipe.id")
+    if recipe.status != "FINISHED" or measurement.status != "FINISHED":
+        return RelationshipResult("non-finished", None, recipe_id)
+    if stored_value(recipe, "registry.role") != "serving-recipe":
+        return RelationshipResult("conflict", None, recipe_id)
+    if stored_value(measurement, "registry.role") != "measurement":
+        return RelationshipResult("conflict", None, recipe_id)
+
+    parent_run_id = stored_value(measurement, "recipe.parent_run_id")
+    if parent_run_id is None:
+        parent_run_id = stored_value(measurement, "mlflow.parentRunId")
+    if parent_run_id is None:
+        return RelationshipResult("unlinked-measurement", None, recipe_id)
+    if parent_run_id != recipe.run_id or _relationship_conflicts(recipe, measurement):
+        return RelationshipResult("conflict", None, recipe_id)
+
+    profile_path = stored_value(recipe, "recipe.profile_path")
+    profile_sha256 = stored_value(recipe, "recipe.profile_sha256")
+    if profile_path is None or profile_sha256 is None:
+        return RelationshipResult("profile-unavailable", "unavailable", recipe_id)
+    try:
+        profile_file = _resolve_file(repository_root, profile_path, "stored profile")
+    except (FileNotFoundError, ValueError):
+        return RelationshipResult("profile-unavailable", "unavailable", recipe_id)
+    current_digest = hashlib.sha256(profile_file.read_bytes()).hexdigest()
+    if current_digest != profile_sha256:
+        return RelationshipResult(
+            "historical-profile-drift", "historical-drift", recipe_id
+        )
+    return RelationshipResult("linked", "exact", recipe_id)
+
+
+def _nullable_stored_value(run: StoredRun, key: str) -> str | None:
+    return stored_value(run, key)
+
+
+def build_handoff(
+    experiment: str,
+    recipe: StoredRun,
+    measurement: StoredRun,
+    profile_state: str | None,
+) -> dict[str, Any]:
+    return {
+        "schema_version": "serving-benchmark-handoff/v1",
+        "experiment": experiment,
+        "recipe": {
+            "id": _nullable_stored_value(recipe, "recipe.id"),
+            "run_id": recipe.run_id,
+            "profile_path": _nullable_stored_value(recipe, "recipe.profile_path"),
+            "profile_sha256": _nullable_stored_value(
+                recipe, "recipe.profile_sha256"
+            ),
+            "profile_state": profile_state,
+        },
+        "measurement": {
+            "id": _nullable_stored_value(measurement, "measurement.id"),
+            "run_id": measurement.run_id,
+            "benchmark_run_id": _nullable_stored_value(
+                measurement, "benchmark.run_id"
+            ),
+            "result_sha256": _nullable_stored_value(
+                measurement, "evidence.result_sha256"
+            ),
+        },
+        "model": {
+            "id": _nullable_stored_value(recipe, "model.id"),
+            "revision": _nullable_stored_value(recipe, "model.revision"),
+            "quantization": _nullable_stored_value(recipe, "model.quantization"),
+        },
+        "serving": {
+            "engine": _nullable_stored_value(recipe, "serving.engine"),
+            "version": _nullable_stored_value(recipe, "serving.version"),
+        },
+    }
+
+
+def _require_exact_fields(
+    value: Mapping[str, Any], required: set[str], name: str
+) -> None:
+    actual = set(value)
+    if actual != required:
+        unexpected = sorted(actual - required)
+        missing = sorted(required - actual)
+        raise ValueError(
+            f"unexpected {name} fields; missing={missing}, unexpected={unexpected}"
+        )
+
+
+def _require_non_empty_text(value: Any, name: str) -> str:
+    if not isinstance(value, str) or not value:
+        raise ValueError(f"{name} must be a non-empty string")
+    return value
+
+
+def _require_optional_text(value: Any, name: str) -> str | None:
+    if value is None:
+        return None
+    return _require_non_empty_text(value, name)
+
+
+def _require_identity(value: Any, name: str, *, nullable: bool = False) -> None:
+    if value is None and nullable:
+        return
+    text = _require_non_empty_text(value, name)
+    if not text.startswith("sha256:"):
+        raise ValueError(f"{name} must use sha256 identity")
+    require_sha256(text.removeprefix("sha256:"), name)
+
+
+def validate_handoff(value: Mapping[str, Any]) -> None:
+    handoff = _as_mapping(value, "handoff")
+    _require_exact_fields(
+        handoff,
+        {"schema_version", "experiment", "recipe", "measurement", "model", "serving"},
+        "handoff",
+    )
+    if handoff["schema_version"] != "serving-benchmark-handoff/v1":
+        raise ValueError("unsupported handoff schema_version")
+    _require_non_empty_text(handoff["experiment"], "experiment")
+
+    recipe = _as_mapping(handoff["recipe"], "recipe")
+    _require_exact_fields(
+        recipe,
+        {"id", "run_id", "profile_path", "profile_sha256", "profile_state"},
+        "recipe",
+    )
+    _require_identity(recipe["id"], "recipe.id")
+    _require_non_empty_text(recipe["run_id"], "recipe.run_id")
+    profile_path = _require_optional_text(recipe["profile_path"], "recipe.profile_path")
+    if profile_path is not None:
+        candidate = Path(profile_path)
+        if candidate.is_absolute() or ".." in candidate.parts:
+            raise ValueError("recipe.profile_path must be repository-relative")
+    profile_sha256 = _require_non_empty_text(
+        recipe["profile_sha256"], "recipe.profile_sha256"
+    )
+    require_sha256(profile_sha256, "recipe.profile_sha256")
+    if recipe["profile_state"] not in {"exact", "historical-drift", "unavailable"}:
+        raise ValueError("invalid recipe.profile_state")
+
+    measurement = _as_mapping(handoff["measurement"], "measurement")
+    _require_exact_fields(
+        measurement,
+        {"id", "run_id", "benchmark_run_id", "result_sha256"},
+        "measurement",
+    )
+    _require_identity(measurement["id"], "measurement.id", nullable=True)
+    _require_non_empty_text(measurement["run_id"], "measurement.run_id")
+    _require_optional_text(measurement["benchmark_run_id"], "measurement.benchmark_run_id")
+    result_sha256 = _require_optional_text(
+        measurement["result_sha256"], "measurement.result_sha256"
+    )
+    if result_sha256 is not None:
+        require_sha256(result_sha256, "measurement.result_sha256")
+
+    model = _as_mapping(handoff["model"], "model")
+    _require_exact_fields(model, {"id", "revision", "quantization"}, "model")
+    _require_non_empty_text(model["id"], "model.id")
+    _require_optional_text(model["revision"], "model.revision")
+    _require_optional_text(model["quantization"], "model.quantization")
+
+    serving = _as_mapping(handoff["serving"], "serving")
+    _require_exact_fields(serving, {"engine", "version"}, "serving")
+    _require_non_empty_text(serving["engine"], "serving.engine")
+    _require_optional_text(serving["version"], "serving.version")

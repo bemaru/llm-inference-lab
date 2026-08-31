@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "serving-benchmark-handoff.schema.json",
+  "title": "Sanitized serving benchmark handoff",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "experiment",
+    "recipe",
+    "measurement",
+    "model",
+    "serving"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "serving-benchmark-handoff/v1"
+    },
+    "experiment": {
+      "type": "string",
+      "minLength": 1
+    },
+    "recipe": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "run_id", "profile_path", "profile_sha256", "profile_state"],
+      "properties": {
+        "id": {"$ref": "#/$defs/identity"},
+        "run_id": {"type": "string", "minLength": 1},
+        "profile_path": {"type": ["string", "null"], "minLength": 1},
+        "profile_sha256": {"$ref": "#/$defs/digest"},
+        "profile_state": {"enum": ["exact", "historical-drift", "unavailable"]}
+      }
+    },
+    "measurement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "run_id", "benchmark_run_id", "result_sha256"],
+      "properties": {
+        "id": {
+          "oneOf": [
+            {"$ref": "#/$defs/identity"},
+            {"type": "null"}
+          ]
+        },
+        "run_id": {"type": "string", "minLength": 1},
+        "benchmark_run_id": {"type": ["string", "null"], "minLength": 1},
+        "result_sha256": {
+          "oneOf": [
+            {"$ref": "#/$defs/digest"},
+            {"type": "null"}
+          ]
+        }
+      }
+    },
+    "model": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "revision", "quantization"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "revision": {"type": ["string", "null"], "minLength": 1},
+        "quantization": {"type": ["string", "null"], "minLength": 1}
+      }
+    },
+    "serving": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["engine", "version"],
+      "properties": {
+        "engine": {"type": "string", "minLength": 1},
+        "version": {"type": ["string", "null"], "minLength": 1}
+      }
+    }
+  },
+  "$defs": {
+    "digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "identity": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    }
+  }
+}
