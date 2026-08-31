@@ -116,24 +116,37 @@ responses, traces, per-item evaluation data, credentials, or tracking URLs.
 The product repository remains responsible for its evaluation checkpoint,
 report, history, and projection manifest.
 
-### Workflow visuals
+### Developer workflow
 
-The operational flow shows the guarded publication and product-evaluation
-handoff. The evidence-lineage view separates preserved entities from the
-activities that use or generate them, and makes the non-duplication boundary
-between Git, MLflow, and Langfuse explicit.
+```mermaid
+flowchart TB
+    accTitle: MLflow benchmark registry developer workflow
+    accDescr: A reviewed serving profile and normalized benchmark run enter the registry synchronizer. Explicit apply creates or reuses a serving recipe and child measurement in MLflow. Read-back and audit validate the relationship before a sanitized handoff is exported for a product repository to consume.
 
-![MLflow benchmark publication, product evaluation, and reconciliation workflow](../../docs/assets/mlflow-benchmark-operational-flow.png)
+    PROFILE["Reviewed serving profile<br/>exact file bytes"]
+    RESULT["Normalized benchmark run<br/>run ID · result SHA-256"]
+    SYNC["Registry synchronizer<br/>dry-run · audit · export · apply"]
+    RECIPE["MLflow serving-recipe<br/>profile identity"]
+    MEASUREMENT["MLflow measurement<br/>benchmark identity"]
+    VERIFY["Read-back and reconciliation<br/>create/reuse · drift · conflict"]
+    HANDOFF["serving-benchmark-handoff/v1<br/>sanitized identities"]
+    PRODUCT["Product repository<br/>evaluation owned by consumer"]
 
-![Evidence lineage from serving profile through benchmark and product evaluation](../../docs/assets/mlflow-evidence-lineage.png)
+    PROFILE -->|validate and hash| SYNC
+    RESULT -->|validate and hash| SYNC
+    SYNC -->|explicit --apply| RECIPE
+    RECIPE -->|parent relationship| MEASUREMENT
+    MEASUREMENT -->|read back and audit| VERIFY
+    VERIFY -->|export valid relationship| HANDOFF
+    HANDOFF -.->|consumer integration| PRODUCT
+```
 
-The editable semantic sources are
-[`mlflow-benchmark-operational-flow.json`](../../docs/assets/mlflow-benchmark-operational-flow.json)
-and [`mlflow-evidence-lineage.json`](../../docs/assets/mlflow-evidence-lineage.json).
-Their reviewed hashes and disclosure limits are recorded in the
-[asset manifest](../../docs/assets/mlflow-benchmark-visuals.manifest.json).
-These diagrams describe the intended workflow; they are not evidence that a
-shared MLflow publication or product evaluation completed.
+Solid edges are implemented by this repository. The dashed edge is owned by
+the consuming product repository and is not automated here. Git retains the
+reviewed profiles, normalized results, and contracts; MLflow stores queryable
+recipe/measurement runs; the product repository retains its evaluation
+checkpoint, report, history, and projection manifest. Raw responses, traces,
+per-item scores, credentials, and tracking URLs do not cross this handoff.
 
 ## Optional local development example
 
