@@ -319,6 +319,17 @@ def export_command(
     root = Path(args.repository_root).resolve()
     recipe = store.read_run(args.recipe_run_id)
     measurement = store.read_run(args.measurement_run_id)
+    recipe_id = registry.stored_value(recipe, "recipe.id")
+    matching_recipes = [
+        run
+        for run in store.list_runs(args.experiment)
+        if registry.stored_value(run, "registry.role") == "serving-recipe"
+        and registry.stored_value(run, "recipe.id") == recipe_id
+    ]
+    if len(matching_recipes) > 1:
+        raise ValueError(f"duplicate recipe.id {recipe_id} in experiment")
+    if not matching_recipes or matching_recipes[0].run_id != recipe.run_id:
+        raise ValueError("selected recipe run is not in the experiment")
     relationship = registry.classify_relationship(recipe, measurement, root)
     if not relationship.exportable:
         raise ValueError(f"relationship is {relationship.status}")

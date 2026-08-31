@@ -339,7 +339,7 @@ def classify_relationship(
     profile_path = stored_value(recipe, "recipe.profile_path")
     profile_sha256 = stored_value(recipe, "recipe.profile_sha256")
     if profile_path is None or profile_sha256 is None:
-        return RelationshipResult("profile-unavailable", "unavailable", recipe_id)
+        return RelationshipResult("conflict", None, recipe_id)
     try:
         profile_file = _resolve_file(repository_root, profile_path, "stored profile")
     except (FileNotFoundError, ValueError):

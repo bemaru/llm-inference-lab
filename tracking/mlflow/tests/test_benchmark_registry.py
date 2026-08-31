@@ -259,6 +259,21 @@ class RelationshipTests(_StoredRunFixture):
         self.assertEqual(result.profile_state, "unavailable")
         self.assertEqual(result.recipe_id, self.recipe.tags["recipe.id"])
 
+    def test_rejects_missing_stored_profile_identity_fields(self) -> None:
+        for key in ("recipe.profile_path", "recipe.profile_sha256"):
+            with self.subTest(key=key):
+                params = dict(self.recipe.params)
+                params.pop(key)
+
+                result = registry.classify_relationship(
+                    self._replace(self.recipe, params=params),
+                    self.measurement,
+                    self.root,
+                )
+
+                self.assertEqual(result.status, "conflict")
+                self.assertFalse(result.exportable)
+
     def test_rejects_unlinked_measurement(self) -> None:
         tags = dict(self.measurement.tags)
         tags.pop("recipe.parent_run_id")

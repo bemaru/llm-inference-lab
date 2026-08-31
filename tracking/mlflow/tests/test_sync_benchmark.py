@@ -324,6 +324,27 @@ class AuditAndExportTests(_CliFixture):
         with self.assertRaisesRegex(ValueError, "relationship is non-finished"):
             cli.export_command(args, store)
 
+    def test_export_rejects_duplicate_recipe_identity_in_experiment(self) -> None:
+        recipe, measurement = self.stored_pair()
+        duplicate = registry.StoredRun(
+            run_id="recipe-duplicate",
+            status=recipe.status,
+            params=recipe.params,
+            tags=recipe.tags,
+            metrics=recipe.metrics,
+        )
+        store = FakeStore([recipe, duplicate, measurement])
+        args = argparse.Namespace(
+            repository_root=self.root,
+            experiment="dgx-spark-llm-inference",
+            recipe_run_id=recipe.run_id,
+            measurement_run_id=measurement.run_id,
+            output=None,
+        )
+
+        with self.assertRaisesRegex(ValueError, "duplicate recipe.id"):
+            cli.export_command(args, store)
+
 
 class OutputTests(_CliFixture):
     def test_write_result_rejects_path_escape(self) -> None:
