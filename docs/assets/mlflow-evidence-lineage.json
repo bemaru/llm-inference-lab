@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "diagram_type": "dataflow",
+  "meta": {
+    "title": "LLM 서빙·제품 평가 증거 계보",
+    "quality_profile": "showcase",
+    "viewBox": [1260, 820]
+  },
+  "stages": [
+    { "label": "정의" },
+    { "label": "벤치마크 실행" },
+    { "label": "서빙 증거" },
+    { "label": "제품 평가" },
+    { "label": "보존·대조" }
+  ],
+  "nodes": [
+    { "id": "serving_profile", "type": "database", "label": "Serving Profile", "sublabel": "model·engine·options", "stage": 0, "row": 0, "tag": "Entity · Git" },
+    { "id": "model_artifact", "type": "database", "label": "Model Artifact", "sublabel": "model·quantization", "stage": 0, "row": 2, "tag": "Entity" },
+    { "id": "benchmark_job", "type": "backend", "label": "Benchmark Job", "sublabel": "DGX Spark execution", "stage": 1, "row": 1, "tag": "Activity" },
+    { "id": "recipe_run", "type": "database", "label": "Recipe Run", "sublabel": "profile byte hash", "stage": 2, "row": 0, "tag": "recipe.id" },
+    { "id": "measurement_run", "type": "database", "label": "Measurement Run", "sublabel": "metrics·resources", "stage": 2, "row": 2, "tag": "benchmark_run_id" },
+    { "id": "handoff_json", "type": "messagebus", "label": "Handoff JSON", "sublabel": "verified references", "stage": 3, "row": 1, "tag": "schema v1" },
+    { "id": "agent_eval_run", "type": "backend", "label": "Agent Evaluation", "sublabel": "EDR1 product execution", "stage": 3, "row": 3, "tag": "Activity" },
+    { "id": "checkpoint", "type": "database", "label": "평가 Checkpoint", "sublabel": "report·aggregate", "stage": 4, "row": 0, "tag": "checkpoint_id · Git" },
+    { "id": "product_eval_run", "type": "database", "label": "MLflow 평가 Run", "sublabel": "aggregate projection", "stage": 4, "row": 2, "tag": "product_eval_run_id" },
+    { "id": "langfuse_trace", "type": "cloud", "label": "Langfuse Trace", "sublabel": "response·tool·judge", "stage": 4, "row": 4, "tag": "trace_id" }
+  ],
+  "flows": [
+    { "from": "serving_profile", "to": "benchmark_job", "label": "used · profile hash", "classification": "input", "variant": "default" },
+    { "from": "model_artifact", "to": "benchmark_job", "label": "used · model id", "classification": "input", "variant": "default" },
+    { "from": "benchmark_job", "to": "recipe_run", "label": "generated · recipe.id", "classification": "immutable identity", "variant": "emphasis" },
+    { "from": "benchmark_job", "to": "measurement_run", "label": "generated · run_id", "classification": "metrics", "variant": "emphasis" },
+    { "from": "recipe_run", "to": "handoff_json", "label": "references · recipe.id", "classification": "verified reference", "variant": "emphasis" },
+    { "from": "measurement_run", "to": "handoff_json", "label": "references · run_id", "classification": "verified reference", "variant": "emphasis" },
+    { "from": "handoff_json", "to": "agent_eval_run", "label": "used · pinned serving", "classification": "evaluation input", "variant": "default" },
+    { "from": "agent_eval_run", "to": "checkpoint", "label": "generated · checkpoint_id", "classification": "canonical report", "variant": "emphasis" },
+    { "from": "agent_eval_run", "to": "langfuse_trace", "label": "generated · trace_id", "classification": "item evidence", "variant": "dashed" },
+    { "from": "checkpoint", "to": "product_eval_run", "label": "projected · aggregate", "classification": "summary only", "variant": "dashed" }
+  ],
+  "cards": [
+    { "dot": "violet", "title": "Entity와 Activity", "items": ["Profile·Run·Checkpoint·Trace는 보존되는 Entity", "Benchmark와 Agent Evaluation은 Entity를 사용·생성하는 Activity", "식별자는 복사하지 않고 참조로 연결"] },
+    { "dot": "cyan", "title": "기준 저장소", "items": ["Serving Profile: llm-inference-lab Git", "Evaluation Checkpoint: EDR1 Git", "Item evidence: Langfuse", "Cross-run aggregate: MLflow", "checkpoint_id·trace_id·run_id는 read-back으로 대조"] },
+    { "dot": "amber", "title": "비복제 원칙", "items": ["Langfuse item-level 데이터는 MLflow에 복제하지 않음", "MLflow에는 비교 가능한 aggregate만 투영", "과거 ID와 당시 hash는 그대로 보존"] }
+  ]
+}

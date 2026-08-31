@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "title": "MLflow benchmark handoff workflow visuals",
+  "created_at": "2026-08-31",
+  "classification": "public-reusable",
+  "derivation": "Reviewed, sanitized visualization export. No live endpoint, credential, host path, raw response, trace, or private run data is included.",
+  "limitations": [
+    "The diagrams describe the intended workflow and evidence boundaries; they do not prove a live deployment or completed remote publication.",
+    "The PNG files are static review renders. The JSON files are the editable semantic sources.",
+    "Product evaluation and Langfuse remain owned by their respective repositories and services."
+  ],
+  "assets": [
+    {
+      "path": "mlflow-benchmark-operational-flow.json",
+      "role": "editable-workflow-source",
+      "sha256": "12f1e236b1a799602e3447dee1604276110466c6b0466d4c1a66743fc39c07bf"
+    },
+    {
+      "path": "mlflow-benchmark-operational-flow.png",
+      "role": "static-workflow-render",
+      "sha256": "f86ba5344e141a894851e7f8b2545b2d5a445f98849986b6253c30f8c4b4eaf5"
+    },
+    {
+      "path": "mlflow-evidence-lineage.json",
+      "role": "editable-data-lineage-source",
+      "sha256": "bd835377b72865ea6772e3b8ae1552cd1a77cdcc98107ffb748ff3898f34b146"
+    },
+    {
+      "path": "mlflow-evidence-lineage.png",
+      "role": "static-data-lineage-render",
+      "sha256": "ed0a71c753497d56290cb2d1627fbea1d98bbf72fec3674c261e804c6e150490"
+    }
+  ]
+}

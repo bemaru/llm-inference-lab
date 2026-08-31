@@ -111,6 +111,25 @@ responses, traces, per-item evaluation data, credentials, or tracking URLs.
 The product repository remains responsible for its evaluation checkpoint,
 report, history, and projection manifest.
 
+### Workflow visuals
+
+The operational flow shows the guarded publication and product-evaluation
+handoff. The evidence-lineage view separates preserved entities from the
+activities that use or generate them, and makes the non-duplication boundary
+between Git, MLflow, and Langfuse explicit.
+
+![MLflow benchmark publication, product evaluation, and reconciliation workflow](../../docs/assets/mlflow-benchmark-operational-flow.png)
+
+![Evidence lineage from serving profile through benchmark and product evaluation](../../docs/assets/mlflow-evidence-lineage.png)
+
+The editable semantic sources are
+[`mlflow-benchmark-operational-flow.json`](../../docs/assets/mlflow-benchmark-operational-flow.json)
+and [`mlflow-evidence-lineage.json`](../../docs/assets/mlflow-evidence-lineage.json).
+Their reviewed hashes and disclosure limits are recorded in the
+[asset manifest](../../docs/assets/mlflow-benchmark-visuals.manifest.json).
+These diagrams describe the intended workflow; they are not evidence that a
+shared MLflow publication or product evaluation completed.
+
 ## Optional local development example
 
 Skip this section when using an existing server. The Compose example runs
