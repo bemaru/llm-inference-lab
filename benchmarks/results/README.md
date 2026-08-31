@@ -58,6 +58,24 @@ The schema intentionally does not depend on MLflow or another experiment
 backend. A future publisher can send the same records to an external registry
 without changing the retained repository evidence.
 
+## MLflow registry inputs
+
+The benchmark registry synchronizer consumes two reviewed Git inputs:
+
+- the exact serving profile under `benchmarks/openai-compatible/profiles/`;
+- one run selected by ID from `dgx-spark.json` with
+  `provenance.result_sha256`.
+
+It checks the profile and run model ID, immutable revision, quantization,
+serving engine, runtime version, and command profile before constructing MLflow
+metadata. A `source_record_sha256` alone is retained historical provenance but
+is not sufficient for a new registry publication. Raw benchmark JSON remains
+under ignored `artifacts/` storage and is not uploaded by this contract.
+
+See the [MLflow registry workflow](../../tracking/mlflow/README.md#benchmark-registry-workflow)
+for disconnected dry-run, read-only audit/export, explicit `--apply`, and the
+product handoff boundary.
+
 ## Experiment Notes
 
 - [Gemma 4: scheduler settings and execution mode](gemma4-scheduler.md) —

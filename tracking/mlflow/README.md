@@ -48,6 +48,69 @@ target server; the local tests below do not establish either.
   Use reviewed, sanitized inputs; never copy private raw reports or credentials
   into this repository merely to publish them.
 
+## Benchmark registry workflow
+
+The dedicated registry synchronizer is stricter than the generic importer. It
+links one reviewed serving profile to one normalized benchmark run, computes
+content identities locally, and emits a sanitized
+`serving-benchmark-handoff/v1` contract for a product repository to consume.
+
+Run a disconnected dry-run from the repository root. This command does not
+need `MLFLOW_TRACKING_URI`, import MLflow, contact a server, or create a run:
+
+```bash
+uv run --locked --script tracking/mlflow/scripts/sync_benchmark.py publish \
+  --profile benchmarks/openai-compatible/profiles/gemma4-26b-a4b-nvfp4-vllm-dspark.json \
+  --run-set benchmarks/results/dgx-spark.json \
+  --run-id 20260825-gemma4-26b-a4b-nvfp4-vllm-baseline02
+```
+
+The dry-run prints the proposed recipe and measurement identities, reviewed
+params/tags/metrics, and a handoff preview with null MLflow run IDs. The recipe
+identity hashes the exact profile bytes. The measurement identity hashes
+canonical JSON containing the benchmark run ID, recipe ID, and retained raw
+result SHA-256.
+
+The following commands contact an existing server. `audit` and `export` are
+read-only; they do not create an experiment or a run:
+
+```bash
+export MLFLOW_TRACKING_URI="https://mlflow.example.com"
+uv run --locked --script tracking/mlflow/scripts/sync_benchmark.py audit
+uv run --locked --script tracking/mlflow/scripts/sync_benchmark.py export \
+  --recipe-run-id RECIPE_RUN_ID \
+  --measurement-run-id MEASUREMENT_RUN_ID \
+  --output artifacts/handoffs/example.json
+```
+
+`audit` classifies links as `linked`, `historical-profile-drift`,
+`profile-unavailable`, `unlinked-measurement`, `conflict`, or `non-finished`.
+Export preserves stored historical identities and fails closed for non-exportable
+relationships.
+
+Publication mutates the configured server only when `--apply` is present:
+
+```bash
+uv run --locked --script tracking/mlflow/scripts/sync_benchmark.py publish \
+  --profile benchmarks/openai-compatible/profiles/gemma4-26b-a4b-nvfp4-vllm-dspark.json \
+  --run-set benchmarks/results/dgx-spark.json \
+  --run-id 20260825-gemma4-26b-a4b-nvfp4-vllm-baseline02 \
+  --apply \
+  --output artifacts/handoffs/gemma4-baseline.json
+```
+
+Review the dry-run and obtain explicit publication approval before adding
+`--apply`. Reapplying identical inputs reuses exactly one matching FINISHED
+recipe/measurement pair; duplicate identities, conflicting fields,
+non-finished runs, and read-back mismatches are errors.
+
+Output files must remain below the repository root. The recommended
+`artifacts/handoffs/` location is ignored by Git. A handoff contains model,
+serving, recipe, and supporting run identities only; it does not contain raw
+responses, traces, per-item evaluation data, credentials, or tracking URLs.
+The product repository remains responsible for its evaluation checkpoint,
+report, history, and projection manifest.
+
 ## Optional local development example
 
 Skip this section when using an existing server. The Compose example runs
