@@ -104,6 +104,11 @@ Review the dry-run and obtain explicit publication approval before adding
 recipe/measurement pair; duplicate identities, conflicting fields,
 non-finished runs, and read-back mismatches are errors.
 
+Without `--output`, apply mode writes one JSON result to stdout containing the
+`create`/`reuse` actions and the validated handoff. MLflow's human-facing run
+links are redirected to stderr so automation can parse stdout directly. With
+`--output`, the handoff is written to the requested repository-contained path.
+
 Output files must remain below the repository root. The recommended
 `artifacts/handoffs/` location is ignored by Git. A handoff contains model,
 serving, recipe, and supporting run identities only; it does not contain raw

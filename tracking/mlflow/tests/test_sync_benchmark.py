@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import argparse
+from contextlib import redirect_stderr, redirect_stdout
+import io
 import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest import mock
 
 from tracking.mlflow import benchmark_registry as registry
 from tracking.mlflow.scripts import sync_benchmark as cli
@@ -360,6 +363,53 @@ class OutputTests(_CliFixture):
             output, self.root / "artifacts" / "handoffs" / "example.json"
         )
         self.assertEqual(output.read_text(encoding="utf-8"), '{\n  "a": 2,\n  "z": 1\n}\n')
+
+
+class MlflowAdapterOutputTests(unittest.TestCase):
+    def test_termination_keeps_sdk_run_links_off_stdout(self) -> None:
+        class PrintingClient:
+            def set_terminated(self, run_id: str, status: str) -> None:
+                print(f"View run {run_id}")
+
+        store = cli.MlflowStore.__new__(cli.MlflowStore)
+        store.client = PrintingClient()
+        stdout = io.StringIO()
+        stderr = io.StringIO()
+
+        with redirect_stdout(stdout), redirect_stderr(stderr):
+            store._set_terminated("run-1", "FINISHED")
+
+        self.assertEqual(stdout.getvalue(), "")
+        self.assertIn("View run run-1", stderr.getvalue())
+
+    def test_apply_without_output_prints_actions_and_handoff(self) -> None:
+        result = {
+            "mode": "apply",
+            "recipe": {"action": "reuse", "run_id": "recipe-run"},
+            "measurement": {"action": "reuse", "run_id": "measurement-run"},
+            "handoff": {"schema_version": "serving-benchmark-handoff/v1"},
+        }
+        stdout = io.StringIO()
+
+        with mock.patch.object(cli, "publish_command", return_value=result):
+            with redirect_stdout(stdout):
+                exit_code = cli.main(
+                    [
+                        "--repository-root",
+                        ".",
+                        "publish",
+                        "--profile",
+                        "profile.json",
+                        "--run-set",
+                        "runs.json",
+                        "--run-id",
+                        "benchmark-run",
+                        "--apply",
+                    ]
+                )
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(json.loads(stdout.getvalue()), result)
 
 
 if __name__ == "__main__":

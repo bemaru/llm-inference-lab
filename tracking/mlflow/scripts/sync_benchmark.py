@@ -10,6 +10,7 @@
 from __future__ import annotations
 
 import argparse
+from contextlib import redirect_stdout
 import json
 import math
 import os
@@ -438,7 +439,7 @@ class MlflowStore:
             )
             if artifact is not None:
                 self.client.log_artifact(run_id, str(artifact), artifact_path="evidence")
-            self.client.set_terminated(run_id, status="FINISHED")
+            self._set_terminated(run_id, "FINISHED")
         except Exception as error:
             raise RunCreationError(run_id, str(error)) from error
         return self.read_run(run_id)
@@ -478,8 +479,14 @@ class MlflowStore:
     def read_run(self, run_id: str) -> registry.StoredRun:
         return self._stored(self.client.get_run(run_id))
 
+    def _set_terminated(self, run_id: str, status: str) -> None:
+        # MLflow prints run URLs to stdout when terminating REST-backed runs.
+        # Keep stdout machine-readable and retain those links on stderr.
+        with redirect_stdout(sys.stderr):
+            self.client.set_terminated(run_id, status=status)
+
     def mark_failed(self, run_id: str) -> None:
-        self.client.set_terminated(run_id, status="FAILED")
+        self._set_terminated(run_id, "FAILED")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -520,19 +527,19 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "publish":
         result = publish_command(args, store_factory)
-        output_value = result.get("handoff", result)
+        file_output = result.get("handoff", result)
     elif args.command == "audit":
         result = audit_command(args, store_factory())
-        output_value = result
+        file_output = result
     else:
         result = export_command(args, store_factory())
-        output_value = result
+        file_output = result
 
     if getattr(args, "output", None):
-        output_path = write_result(root, args.output, output_value)
+        output_path = write_result(root, args.output, file_output)
         print(json.dumps({"output": str(output_path.relative_to(root))}, sort_keys=True))
     else:
-        print(json.dumps(output_value, indent=2, sort_keys=True, allow_nan=False))
+        print(json.dumps(result, indent=2, sort_keys=True, allow_nan=False))
     return 0
 
 
