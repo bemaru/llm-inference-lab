@@ -172,4 +172,5 @@ python3 -m unittest discover -s benchmarks/openai-compatible/tests -p 'test_*.py
 python3 -m unittest discover -s leaderboards -p 'test_*.py'
 bash tracking/mlflow/tests/local_client_test.sh
 python3 leaderboards/build.py --check
+python3 leaderboards/build_sheet.py --check
 ```
