@@ -124,7 +124,8 @@ FINDINGS: list[tuple[str, str, str, str, Holds]] = [
 RISK_FINDING = ("가장 큰 리스크는 속도가 아니라 모델과 런타임의 호환성입니다. Gemma4 NVFP4는 vLLM 0.27.1에서 서버가 뜨지 않았고, "
                 "EXAONE은 중첩 tool call이 6번 모두 실패했고, DFlash2의 초기 66.8 tok/s는 재측정에서 재현되지 않았습니다.")
 UNKNOWN_TEXT = [
-    "속도와 API 동작만 측정했습니다. 한국어를 포함한 답변 품질은 어떤 실행에서도 측정하지 않았습니다.",
+    "이 repo의 실행은 속도와 API 동작만 측정했고, 한국어를 포함한 답변 품질은 측정하지 않았습니다. "
+    "제품 연동 품질 평가(eval)는 이 repo 범위가 아니며 각 제품 저장소에서 관리합니다.",
     "모든 측정이 1회이고, 지속 부하 측정은 Nemotron 예비 측정 1건뿐입니다. 해당 서빙 프로필"
     "(nemotron35-lightning-nvfp4-vllm-dspark)의 max_num_seqs가 2라서 동시 시퀀스 3개 이상의 용량은 측정되지 않았습니다.",
 ]
@@ -549,7 +550,7 @@ def build_tabs(data: dict[str, Any], preview: dict[str, Any], source: str, suffi
     summary.put("A2", "이 repo는 DGX Spark(GB10, 128 GiB 통합 메모리) 한 대에서 어떤 오픈 모델을 어떤 엔진과 설정으로 "
                       "서빙할지 고르기 위한 서빙 레시피, 측정 도구, 검토된 측정 결과를 모아 둔 곳입니다.")
     summary.put("A3", f"{source}. 이 시트는 repo 데이터로 다시 만들어지므로 여기서 고친 내용은 다음 갱신 때 사라집니다. "
-                      "모든 수치는 1회 측정이고 답변 품질은 측정하지 않았습니다. 같은 비교 그룹 안에서만 순위를 비교합니다.")
+                      "모든 수치는 1회 측정이고 답변 품질은 이 repo에서 측정하지 않았습니다. 같은 비교 그룹 안에서만 순위를 비교합니다.")
     for row in (2, 3):
         summary.merges.append(f"A{row}:I{row}")
         summary.fmt(f"A{row}", WRAP_TOP)
